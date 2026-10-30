@@ -39,6 +39,13 @@ export interface GenerationOptions {
   modelParams: Record<string, any>
 }
 
+export interface MeshViewStats {
+  vertices: number
+  triangles: number
+  /** Bounding-box size in model units (metres when a real-world size is set). */
+  extents?: [number, number, number]
+}
+
 export interface LightSettings {
   mainIntensity: number
   mainColor: string
@@ -103,8 +110,8 @@ interface AppState {
   generationOptions: GenerationOptions
 
   // Mesh stats (set by Viewer3D, read by GenerationHUD)
-  meshStats: { vertices: number; triangles: number } | null
-  setMeshStats: (stats: { vertices: number; triangles: number } | null) => void
+  meshStats: MeshViewStats | null
+  setMeshStats: (stats: MeshViewStats | null) => void
 
   // Mesh selection (set by Viewer3D click, read by the Generate tools bar)
   meshSelected: boolean

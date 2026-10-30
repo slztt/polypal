@@ -2,7 +2,7 @@ import { Component, Suspense, useCallback, useEffect, useMemo, useRef, useState 
 import type { ReactNode, ErrorInfo, MutableRefObject } from 'react'
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import type { ThreeEvent } from '@react-three/fiber'
-import { Environment, GizmoHelper, Lightformer, OrbitControls, useGizmoContext, useGLTF } from '@react-three/drei'
+import { ContactShadows, Environment, GizmoHelper, Html, Lightformer, Line, OrbitControls, useGizmoContext, useGLTF } from '@react-three/drei'
 import { EffectComposer, Outline, Select, Selection } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
@@ -18,6 +18,9 @@ import { useAppStore } from '@shared/stores/appStore'
 import { ViewerToolbar, type ViewMode } from './ViewerToolbar'
 import type { LightSettings, PointLight } from '@shared/stores/appStore'
 import { DEFAULT_LIGHT_SETTINGS } from '@shared/stores/appStore'
+import type { MeshViewStats } from '@shared/stores/appStore'
+import { computeDeviation, type DeviationResult } from '../deviation'
+import { formatDimensions, formatLength, formatNumber, formatUnitless } from '@shared/utils/units'
 
 export type GizmoMode = 'translate' | 'rotate' | 'scale'
 
@@ -193,15 +196,20 @@ interface MeshModelProps {
   jobId: string
   viewMode: ViewMode
   selected: boolean
-  onStats: (stats: { vertices: number; triangles: number }) => void
+  onStats: (stats: MeshViewStats) => void
   onSelect: () => void
   onObject: (obj: THREE.Object3D | null) => void
+  /** Clipping plane for the before/after wipe (keeps the positive side). */
+  clipPlane?: THREE.Plane | null
+  /** Per-vertex deviation colours for the 'deviation' view mode. */
+  deviation?: DeviationResult | null
+  /** When set, clicks report a surface point instead of selecting the mesh. */
+  onPick?: (point: THREE.Vector3) => void
 }
 
-function MeshModel({ url, jobId, viewMode, selected, onStats, onSelect, onObject }: MeshModelProps): JSX.Element {
-  const extension = url.split('?')[0]?.split('.').pop()?.toLowerCase()
-  const common = { url, jobId, viewMode, selected, onStats, onSelect, onObject }
-  return extension === 'obj' ? <ObjMeshModel {...common} /> : <GltfMeshModel {...common} />
+function MeshModel(props: MeshModelProps): JSX.Element {
+  const extension = props.url.split('?')[0]?.split('.').pop()?.toLowerCase()
+  return extension === 'obj' ? <ObjMeshModel {...props} /> : <GltfMeshModel {...props} />
 }
 
 function GltfMeshModel(props: MeshModelProps): JSX.Element {
@@ -221,6 +229,9 @@ function SceneMeshModel({
   onStats,
   onSelect,
   onObject,
+  clipPlane = null,
+  deviation = null,
+  onPick,
   scene,
   loaderType,
 }: MeshModelProps & {
@@ -285,6 +296,8 @@ function SceneMeshModel({
     const box = new THREE.Box3().setFromObject(scene)
     const center = new THREE.Vector3()
     box.getCenter(center)
+    const size = new THREE.Vector3()
+    box.getSize(size)
     scene.position.set(-center.x, -box.min.y, -center.z)
 
     // Compute stats
@@ -299,7 +312,7 @@ function SceneMeshModel({
       }
     })
     const roundedTriangles = Math.round(triangles)
-    onStats({ vertices: Math.round(vertices), triangles: roundedTriangles })
+    onStats({ vertices: Math.round(vertices), triangles: roundedTriangles, extents: [size.x, size.y, size.z] })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- recompute on scene change only; onStats is a stable callback
   }, [scene])
 
@@ -322,8 +335,29 @@ function SceneMeshModel({
         child.userData.originalMaterial = child.material
       }
 
+      // Leaving the deviation view: put back any vertex colours it replaced.
+      if (child.userData.deviationApplied) {
+        const saved = child.userData.savedColor as THREE.BufferAttribute | undefined
+        if (saved) child.geometry.setAttribute('color', saved)
+        else child.geometry.deleteAttribute('color')
+        child.userData.deviationApplied = false
+        child.userData.savedColor = undefined
+      }
+
       let next: THREE.Material
       switch (viewMode) {
+        case 'deviation': {
+          const colors = deviation?.colors.get(child.uuid)
+          if (!colors || colors.length / 3 !== child.geometry.attributes.position.count) {
+            next = new THREE.MeshLambertMaterial({ color: 0x52525b })
+            break
+          }
+          child.userData.savedColor = child.geometry.getAttribute('color') ?? undefined
+          child.userData.deviationApplied = true
+          child.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+          next = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })
+          break
+        }
         case 'wireframe': {
           next = new THREE.MeshBasicMaterial({ color: 0x4ade80, wireframe: true })
           break
@@ -345,13 +379,29 @@ function SceneMeshModel({
 
       child.material = next
     })
-  }, [scene, viewMode])
+  }, [scene, viewMode, deviation])
+
+  // Before/after wipe: clip whatever material is active to one side.
+  useEffect(() => {
+    scene.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return
+      const mats = Array.isArray(child.material) ? child.material : [child.material]
+      mats.forEach((m: THREE.Material) => {
+        m.clippingPlanes = clipPlane ? [clipPlane] : null
+        m.needsUpdate = true
+      })
+    })
+  }, [scene, viewMode, deviation, clipPlane])
 
   return (
     <Select enabled={selected}>
       <primitive
         object={scene}
-        onClick={(e: { stopPropagation: () => void }) => { e.stopPropagation(); onSelect() }}
+        onClick={(e: ThreeEvent<MouseEvent>) => {
+          e.stopPropagation()
+          if (onPick) onPick(e.point.clone())
+          else onSelect()
+        }}
       />
     </Select>
   )
@@ -892,6 +942,122 @@ function PointLightMarker({
 }
 
 // ---------------------------------------------------------------------------
+// Diagnostics: reference model, before/after wipe, measuring
+// ---------------------------------------------------------------------------
+
+/** Distinct cache key so the reference never shares a scene object with the main model. */
+function referenceUrl(url: string): string {
+  return `${url}${url.includes('?') ? '&' : '?'}polypalRef=1`
+}
+
+function ReferenceScene({ scene, clipPlane, visible, onObject }: {
+  scene: THREE.Group | THREE.Scene
+  clipPlane: THREE.Plane | null
+  visible: boolean
+  onObject: (obj: THREE.Object3D | null) => void
+}): JSX.Element {
+  useEffect(() => {
+    // Same placement rule as the main model: centred on X/Z, resting on Y = 0.
+    scene.position.set(0, 0, 0)
+    scene.rotation.set(0, 0, 0)
+    scene.scale.set(1, 1, 1)
+    const box = new THREE.Box3().setFromObject(scene)
+    const center = new THREE.Vector3()
+    box.getCenter(center)
+    scene.position.set(-center.x, -box.min.y, -center.z)
+    onObject(scene)
+    return () => onObject(null)
+  }, [scene, onObject])
+
+  useEffect(() => {
+    scene.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return
+      const mats = Array.isArray(child.material) ? child.material : [child.material]
+      mats.forEach((m: THREE.Material) => {
+        m.side = THREE.DoubleSide
+        m.clippingPlanes = clipPlane ? [clipPlane] : null
+        m.needsUpdate = true
+      })
+    })
+  }, [scene, clipPlane])
+
+  return <primitive object={scene} visible={visible} raycast={() => null} />
+}
+
+function GltfReference(props: { url: string; clipPlane: THREE.Plane | null; visible: boolean; onObject: (o: THREE.Object3D | null) => void }): JSX.Element {
+  const key = referenceUrl(props.url)
+  const { scene } = useGLTF(key)
+  useEffect(() => () => useGLTF.clear(key), [key])
+  return <ReferenceScene scene={scene} {...props} />
+}
+
+function ObjReference(props: { url: string; clipPlane: THREE.Plane | null; visible: boolean; onObject: (o: THREE.Object3D | null) => void }): JSX.Element {
+  const key = referenceUrl(props.url)
+  const scene = useLoader(OBJLoader, key)
+  useEffect(() => () => useLoader.clear(OBJLoader, key), [key])
+  return <ReferenceScene scene={scene} {...props} />
+}
+
+function ReferenceModel(props: { url: string; clipPlane: THREE.Plane | null; visible: boolean; onObject: (o: THREE.Object3D | null) => void }): JSX.Element {
+  const extension = props.url.split('?')[0]?.split('.').pop()?.toLowerCase()
+  return extension === 'obj' ? <ObjReference {...props} /> : <GltfReference {...props} />
+}
+
+/**
+ * Keeps the wipe planes vertical on screen: both pass through the point under
+ * the slider at the orbit target's depth, with normals along the camera's
+ * right vector. `after` keeps the right side, `before` the left.
+ */
+function WipeController({ position, after, before }: {
+  position: number
+  after: THREE.Plane
+  before: THREE.Plane
+}): null {
+  const camera = useThree((s) => s.camera)
+  const controls = useThree((s) => s.controls) as unknown as { target?: THREE.Vector3 } | null
+  const right = useMemo(() => new THREE.Vector3(), [])
+  const point = useMemo(() => new THREE.Vector3(), [])
+  useFrame(() => {
+    const target = controls?.target ?? new THREE.Vector3()
+    const depth = target.clone().project(camera).z
+    point.set(position * 2 - 1, 0, depth).unproject(camera)
+    right.setFromMatrixColumn(camera.matrixWorld, 0).normalize()
+    after.setFromNormalAndCoplanarPoint(right, point)
+    before.copy(after).negate()
+  })
+  return null
+}
+
+function MeasureLayer({ points, label, markerSize }: {
+  points: THREE.Vector3[]
+  label: string | null
+  markerSize: number
+}): JSX.Element | null {
+  if (points.length === 0) return null
+  const mid = points.length === 2 ? points[0].clone().add(points[1]).multiplyScalar(0.5) : null
+  return (
+    <group renderOrder={1000}>
+      {points.map((p, i) => (
+        <mesh key={i} position={p} raycast={() => null} renderOrder={1000}>
+          <sphereGeometry args={[markerSize, 16, 16]} />
+          <meshBasicMaterial color="#4ade80" depthTest={false} toneMapped={false} transparent />
+        </mesh>
+      ))}
+      {points.length === 2 && (
+        <Line points={[points[0], points[1]]} color="#4ade80" lineWidth={2} depthTest={false} renderOrder={1000} />
+      )}
+      {mid && label && (
+        <Html position={mid} center zIndexRange={[30, 0]} style={{ pointerEvents: 'none' }}>
+          <div className="px-2 py-0.5 rounded-md bg-zinc-950/90 border border-accent/50 text-[11px] font-mono text-accent-light whitespace-nowrap">
+            {label}
+          </div>
+        </Html>
+      )}
+    </group>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // EmptyState
 // ---------------------------------------------------------------------------
 
@@ -920,7 +1086,9 @@ export default function Viewer3D({
   selectedPointLightId = null,
   onSelectPointLight,
   onPointLightsChange,
+  realWorld = false,
 }: {
+  realWorld?: boolean
   lightSettings?: LightSettings
   gizmoMode?: GizmoMode | null
   gizmoUndoRef?: MutableRefObject<(() => boolean) | null>
@@ -938,6 +1106,25 @@ export default function Viewer3D({
 
   const [viewMode, setViewMode] = useState<ViewMode>('solid')
   const [autoRotate, setAutoRotate] = useState(false)
+  const units = useAppStore((s) => s.units)
+  const contactShadows = useAppStore((s) => s.contactShadows)
+  const setContactShadows = useAppStore((s) => s.setContactShadows)
+  const meshHistory = useAppStore((s) => s.meshHistory)
+  const historyIndex = useAppStore((s) => s.historyIndex)
+
+  // ── Diagnostics state ──
+  const [compareActive, setCompareActive] = useState(false)
+  const [compareAgainst, setCompareAgainst] = useState<'previous' | 'original'>('previous')
+  const [wipe, setWipe] = useState(0.5)
+  const [referenceObject, setReferenceObject] = useState<THREE.Object3D | null>(null)
+  const [deviation, setDeviation] = useState<DeviationResult | null>(null)
+  const [deviationBusy, setDeviationBusy] = useState(false)
+  const [measureActive, setMeasureActive] = useState(false)
+  const [measurePoints, setMeasurePoints] = useState<THREE.Vector3[]>([])
+  const afterPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(1, 0, 0), 0), [])
+  const beforePlane = useMemo(() => new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0), [])
+  const wipeDragging = useRef(false)
+  const viewerRef = useRef<HTMLDivElement | null>(null)
   const selected = useAppStore((s) => s.meshSelected)
   const setSelected = useAppStore((s) => s.setMeshSelected)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -966,13 +1153,72 @@ export default function Viewer3D({
     ? `${apiUrl}/optimize/ply-to-splat?path=${encodeURIComponent(outputUrl.slice('/workspace/'.length))}`
     : modelUrl
 
+  // The version the current mesh is compared against (wipe and heatmap).
+  const referenceIndex = compareAgainst === 'original' ? 0 : historyIndex - 1
+  const referenceMeshUrl = referenceIndex >= 0 && referenceIndex < historyIndex ? meshHistory[referenceIndex] : null
+  const referenceModelUrl = referenceMeshUrl && referenceMeshUrl !== outputUrl && !/\.(ply|splat)$/i.test(referenceMeshUrl)
+    ? `${apiUrl}${referenceMeshUrl}`
+    : null
+  const needsReference = !!referenceModelUrl && (compareActive || viewMode === 'deviation')
+
   // Reset view state when model changes
   useEffect(() => {
     setSelected(false)
-    setViewMode('solid')
+    setViewMode((mode) => (mode === 'deviation' ? mode : 'solid'))
+    setMeasurePoints([])
+    setDeviation(null)
     setStoreMeshStats(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when the model changes; setters are stable
   }, [modelUrl])
+
+  // Heatmap: distances from the current mesh to the reference surface.
+  useEffect(() => {
+    if (viewMode !== 'deviation' || !meshObject || !referenceObject) { setDeviation(null); return }
+    setDeviationBusy(true)
+    // Let the "Computing…" state paint before the synchronous BVH pass.
+    const timer = setTimeout(() => {
+      try {
+        setDeviation(computeDeviation(meshObject, referenceObject))
+      } catch (err) {
+        console.warn('[Viewer3D] deviation failed:', err)
+        setDeviation(null)
+      } finally {
+        setDeviationBusy(false)
+      }
+    }, 30)
+    return () => clearTimeout(timer)
+  }, [viewMode, meshObject, referenceObject])
+
+  useEffect(() => {
+    if (!referenceModelUrl) {
+      setCompareActive(false)
+      setViewMode((mode) => (mode === 'deviation' ? 'solid' : mode))
+    }
+  }, [referenceModelUrl])
+
+  // Measuring: Escape clears, leaving the tool clears.
+  useEffect(() => { if (!measureActive) setMeasurePoints([]) }, [measureActive])
+
+  const handlePick = useCallback((point: THREE.Vector3) => {
+    setMeasurePoints((prev) => (prev.length >= 2 ? [point] : [...prev, point]))
+  }, [])
+
+  // Distances are taken in the model's own coordinates (gizmo pose undone),
+  // so they match the file — metres when a real-world size is set.
+  const measuredDistance = useMemo(() => {
+    if (measurePoints.length !== 2 || !meshObject) return null
+    const a = meshObject.worldToLocal(measurePoints[0].clone())
+    const b = meshObject.worldToLocal(measurePoints[1].clone())
+    return a.distanceTo(b)
+  }, [measurePoints, meshObject])
+
+  const modelSpan = Math.max(...(meshStats?.extents ?? [1, 1, 1]), 1e-3)
+
+  function onWipePointer(e: React.PointerEvent) {
+    const rect = viewerRef.current?.getBoundingClientRect()
+    if (!rect) return
+    setWipe(Math.min(0.98, Math.max(0.02, (e.clientX - rect.left) / rect.width)))
+  }
 
   // Clear the shared selection when the viewer unmounts — the store would
   // otherwise keep it set and flash a stale selection on the next mount.
@@ -1087,7 +1333,7 @@ export default function Viewer3D({
 
   return (
     <ModelErrorBoundary resetKey={modelUrl} fallback={<ModelLoadError />}>
-      <div className="relative w-full h-full bg-surface-400">
+      <div ref={viewerRef} className="relative w-full h-full bg-surface-400">
         {!modelUrl && <EmptyState />}
 
         {/* Splat path → fully isolated viewer (mkkellogg, outside R3F) */}
@@ -1105,6 +1351,7 @@ export default function Viewer3D({
             antialias: true,
             preserveDrawingBuffer: true,
             outputColorSpace: THREE.SRGBColorSpace,
+            localClippingEnabled: true,
           }}
         >
           <color attach="background" args={['#18181b']} />
@@ -1117,6 +1364,18 @@ export default function Viewer3D({
           </Environment>
 
           <gridHelper args={[10, 20, '#3f3f46', '#27272a']} />
+
+          {contactShadows && modelUrl && meshStats && (
+            <ContactShadows
+              position={[0, 0.0005, 0]}
+              scale={Math.max(2, modelSpan * 3)}
+              far={Math.max(0.5, (meshStats.extents?.[1] ?? 1) * 1.2)}
+              blur={2.4}
+              opacity={0.55}
+              resolution={512}
+              color="#000000"
+            />
+          )}
 
           {modelUrl && currentJob ? (
             <Selection enabled={selected}>
@@ -1132,10 +1391,34 @@ export default function Viewer3D({
                   onStats={setStoreMeshStats}
                   onSelect={handleMeshSelect}
                   onObject={setMeshObject}
+                  clipPlane={compareActive && referenceModelUrl ? afterPlane : null}
+                  deviation={deviation}
+                  onPick={measureActive ? handlePick : undefined}
                 />
               </Suspense>
+              {needsReference && referenceModelUrl && (
+                <Suspense fallback={null}>
+                  <ReferenceModel
+                    url={referenceModelUrl}
+                    clipPlane={compareActive ? beforePlane : null}
+                    visible={compareActive}
+                    onObject={setReferenceObject}
+                  />
+                </Suspense>
+              )}
             </Selection>
           ) : null}
+
+          {compareActive && referenceModelUrl && <WipeController position={wipe} after={afterPlane} before={beforePlane} />}
+
+          {measureActive && (
+            <MeasureLayer
+              points={measurePoints}
+              markerSize={modelSpan * 0.008}
+              label={measuredDistance === null ? null
+                : realWorld ? formatLength(measuredDistance, units, 4) : `${formatNumber(measuredDistance, 4)} units`}
+            />
+          )}
 
           {/* Point light markers */}
           {onPointLightsChange && pointLights.map((pl) => (
@@ -1192,12 +1475,109 @@ export default function Viewer3D({
             onAutoRotate={() => setAutoRotate((v) => !v)}
             onScreenshot={handleScreenshot}
             showViewModes={!isSplat}
+            canCompare={!!referenceModelUrl}
+            compareActive={compareActive}
+            onCompare={() => setCompareActive((v) => !v)}
+            measureActive={measureActive}
+            onMeasure={() => setMeasureActive((v) => !v)}
+            contactShadows={contactShadows}
+            onContactShadows={() => setContactShadows(!contactShadows)}
           />
+        )}
+
+        {/* Before/after wipe handle */}
+        {compareActive && referenceModelUrl && (
+          <div className="absolute inset-0 pointer-events-none z-10">
+            <div className="absolute top-0 bottom-0 w-px bg-accent-light/80" style={{ left: `${wipe * 100}%` }} />
+            <div
+              role="slider"
+              aria-label="Before/after split"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(wipe * 100)}
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowLeft') setWipe((w) => Math.max(0.02, w - 0.02))
+                if (e.key === 'ArrowRight') setWipe((w) => Math.min(0.98, w + 0.02))
+              }}
+              onPointerDown={(e) => { wipeDragging.current = true; (e.target as HTMLElement).setPointerCapture(e.pointerId) }}
+              onPointerMove={(e) => { if (wipeDragging.current) onWipePointer(e) }}
+              onPointerUp={() => { wipeDragging.current = false }}
+              className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-zinc-900 border-2 border-accent-light shadow-lg flex items-center justify-center cursor-ew-resize pointer-events-auto"
+              style={{ left: `${wipe * 100}%` }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5">
+                <polyline points="9 6 3 12 9 18" /><polyline points="15 6 21 12 15 18" />
+              </svg>
+            </div>
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 pointer-events-auto">
+              <span className="px-2 py-0.5 rounded bg-zinc-900/80 text-[10px] text-zinc-400">Before</span>
+              <select
+                value={compareAgainst}
+                onChange={(e) => setCompareAgainst(e.target.value as 'previous' | 'original')}
+                aria-label="Compare against"
+                className="bg-zinc-900/90 border border-zinc-700 rounded px-1.5 py-0.5 text-[10px] text-zinc-300"
+              >
+                <option value="previous">Previous version</option>
+                <option value="original">Original</option>
+              </select>
+              <span className="px-2 py-0.5 rounded bg-zinc-900/80 text-[10px] text-accent-light">After</span>
+            </div>
+          </div>
+        )}
+
+        {/* Deviation legend */}
+        {viewMode === 'deviation' && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-3 py-2 rounded-xl bg-zinc-900/85 border border-zinc-700/60 backdrop-blur-sm flex flex-col gap-1.5 min-w-[240px]">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500">Deviation from</span>
+              <select
+                value={compareAgainst}
+                onChange={(e) => setCompareAgainst(e.target.value as 'previous' | 'original')}
+                aria-label="Deviation reference"
+                className="bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5 text-[10px] text-zinc-300"
+              >
+                <option value="previous">Previous version</option>
+                <option value="original">Original</option>
+              </select>
+            </div>
+            {deviationBusy || (!deviation && referenceModelUrl) ? (
+              <p className="text-[11px] text-zinc-400">Computing…</p>
+            ) : deviation ? (
+              <>
+                <div className="h-2 rounded-full" style={{ background: 'linear-gradient(90deg, rgb(18,92,84), rgb(33,196,94), rgb(250,191,36), rgb(240,69,69))' }} />
+                <div className="flex justify-between text-[10px] font-mono text-zinc-400">
+                  <span>0</span>
+                  <span>{realWorld ? formatLength(deviation.scale, units) : `${formatNumber(deviation.scale)} u`}+</span>
+                </div>
+                <p className="text-[10px] text-zinc-500">
+                  mean {realWorld ? formatLength(deviation.stats.mean, units) : formatNumber(deviation.stats.mean)}
+                  {' · '}max {realWorld ? formatLength(deviation.stats.max, units) : formatNumber(deviation.stats.max)}
+                </p>
+              </>
+            ) : (
+              <p className="text-[11px] text-zinc-500">No earlier version to compare with.</p>
+            )}
+          </div>
+        )}
+
+        {/* Measure hint */}
+        {measureActive && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 rounded-lg bg-zinc-900/85 border border-zinc-700/60 text-[11px] text-zinc-300 pointer-events-none">
+            {measurePoints.length < 2 ? `Click ${measurePoints.length === 0 ? 'two points' : 'a second point'} on the model to measure`
+              : `Distance: ${measuredDistance !== null ? (realWorld ? formatLength(measuredDistance, units, 4) : `${formatNumber(measuredDistance, 4)} units`) : '—'} · click to start again`}
+            {!realWorld && measurePoints.length === 2 && <span className="text-zinc-500"> (set a real-world size for true units)</span>}
+          </div>
         )}
 
         {/* Bottom-left stats overlay */}
         {meshStats && (
-          <div className="absolute bottom-4 left-4 pointer-events-none">
+          <div className="absolute bottom-4 left-4 pointer-events-none flex flex-col gap-0.5">
+            {meshStats.extents && (
+              <p className="text-xs text-zinc-400 font-mono" title={realWorld ? 'Real-world size (W × H × D)' : 'No real-world size set — open the Mesh Editor to set one'}>
+                {realWorld ? formatDimensions(meshStats.extents, units) : formatUnitless(meshStats.extents)}
+              </p>
+            )}
             <p className="text-xs text-zinc-500">
               {meshStats.triangles.toLocaleString()} tri &bull; {meshStats.vertices.toLocaleString()} verts
             </p>

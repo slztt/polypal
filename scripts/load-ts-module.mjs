@@ -2,8 +2,7 @@
 // esbuild and require it, so node --test can exercise renderer logic modules.
 import { buildSync } from 'esbuild'
 import { createRequire } from 'node:module'
-import { mkdtempSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 const ALIASES = {
@@ -12,7 +11,10 @@ const ALIASES = {
 }
 
 export function loadTsModule(path, { external = [] } = {}) {
-  const outfile = join(mkdtempSync(join(tmpdir(), 'polypal-test-')), 'module.cjs')
+  // Inside node_modules so bundles can still require() their external packages.
+  const cacheDir = resolve('node_modules/.cache/polypal-tests')
+  mkdirSync(cacheDir, { recursive: true })
+  const outfile = join(mkdtempSync(join(cacheDir, 'module-')), 'module.cjs')
   const result = buildSync({
     entryPoints: [resolve(path)],
     bundle: true,

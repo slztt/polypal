@@ -8,7 +8,22 @@ interface ViewerToolbarProps {
   onAutoRotate: () => void
   onScreenshot: () => void
   showViewModes?: boolean   // view modes are mesh-only; hidden for splats
+  canCompare?: boolean      // an earlier version exists to compare against
+  compareActive?: boolean
+  onCompare?: () => void
+  measureActive?: boolean
+  onMeasure?: () => void
+  contactShadows?: boolean
+  onContactShadows?: () => void
 }
+
+const DEVIATION_ICON = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+    <path d="M12 3a9 9 0 1 0 9 9" />
+    <path d="M12 7a5 5 0 1 0 5 5" />
+    <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+  </svg>
+)
 
 const MODES: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
   {
@@ -74,6 +89,13 @@ export function ViewerToolbar({
   onAutoRotate,
   onScreenshot,
   showViewModes = true,
+  canCompare = false,
+  compareActive = false,
+  onCompare,
+  measureActive = false,
+  onMeasure,
+  contactShadows = false,
+  onContactShadows,
 }: ViewerToolbarProps): JSX.Element {
   return (
     <div className="absolute left-4 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1 bg-zinc-900/70 border border-zinc-700/50 backdrop-blur-sm rounded-xl p-1.5">
@@ -88,7 +110,53 @@ export function ViewerToolbar({
         </ToolbarButton>
       ))}
 
+      {showViewModes && (
+        <ToolbarButton
+          active={viewMode === 'deviation'}
+          disabled={!canCompare}
+          label={canCompare ? 'Deviation heatmap (vs. earlier version)' : 'Deviation heatmap — edit the mesh first'}
+          onClick={() => onViewMode(viewMode === 'deviation' ? 'solid' : 'deviation')}
+        >
+          {DEVIATION_ICON}
+        </ToolbarButton>
+      )}
+
       {showViewModes && <div className="my-1 border-t border-zinc-700/50" />}
+
+      {showViewModes && onCompare && (
+        <ToolbarButton
+          active={compareActive}
+          disabled={!canCompare}
+          label={canCompare ? 'Before / after comparison' : 'Before / after — edit the mesh first'}
+          onClick={onCompare}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <line x1="12" y1="2" x2="12" y2="22" />
+            <path d="M3 4h9v16H3z" fill="currentColor" fillOpacity="0.25" />
+          </svg>
+        </ToolbarButton>
+      )}
+
+      {showViewModes && onMeasure && (
+        <ToolbarButton active={measureActive} label="Measure distance" onClick={onMeasure}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+            <path d="M3 17 17 3l4 4L7 21z" />
+            <path d="m7 13 2 2M10 10l2 2M13 7l2 2" />
+          </svg>
+        </ToolbarButton>
+      )}
+
+      {showViewModes && onContactShadows && (
+        <ToolbarButton active={contactShadows} label="Contact shadows" onClick={onContactShadows}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+            <path d="M12 3 5 14h14z" />
+            <ellipse cx="12" cy="19" rx="8" ry="2" fill="currentColor" fillOpacity="0.35" />
+          </svg>
+        </ToolbarButton>
+      )}
+
+      {showViewModes && (onCompare || onMeasure || onContactShadows) && <div className="my-1 border-t border-zinc-700/50" />}
 
       <ToolbarButton
         active={autoRotate}
@@ -117,18 +185,22 @@ export function ViewerToolbar({
 
 interface ToolbarButtonProps {
   active: boolean
+  disabled?: boolean
   label: string
   onClick: () => void
   children: React.ReactNode
 }
 
-function ToolbarButton({ active, label, onClick, children }: ToolbarButtonProps): JSX.Element {
+function ToolbarButton({ active, disabled = false, label, onClick, children }: ToolbarButtonProps): JSX.Element {
   return (
     <button
       title={label}
+      aria-label={label}
+      aria-pressed={active}
+      disabled={disabled}
       onClick={onClick}
       className={`
-        relative w-8 h-8 flex items-center justify-center rounded-lg transition-colors
+        relative w-8 h-8 flex items-center justify-center rounded-lg transition-colors disabled:opacity-30 disabled:pointer-events-none
         ${active
           ? 'bg-green-600 text-white'
           : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/60'

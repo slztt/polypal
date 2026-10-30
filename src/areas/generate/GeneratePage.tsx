@@ -1299,6 +1299,7 @@ export default function GeneratePage(): JSX.Element {
             selectedPointLightId={selectedPointLightId}
             onSelectPointLight={handleSelectPointLight}
             onPointLightsChange={setPointLights}
+            realWorld={realWorld}
           />
           <GenerationHUD />
         </div>
