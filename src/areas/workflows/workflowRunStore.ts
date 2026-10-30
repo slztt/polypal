@@ -434,6 +434,7 @@ async function executeExtensionNode(
       fd.append('enable_texture', 'false')
       fd.append('texture_resolution', '1024')
       fd.append('params', JSON.stringify({ ...effectiveParams, ...extraParams }))
+      fd.append('priority', useAppStore.getState().generationPriority)
       submission = await client.post('/generate/from-image', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
     }
     const { data } = submission
@@ -460,8 +461,10 @@ async function executeExtensionNode(
       }
       if (st.status === 'error') throw new Error(st.error ?? 'Generation failed')
 
-      setRunState((s) => ({ ...s, blockProgress: st.progress ?? s.blockProgress, blockStep: st.step ?? 'Generating…' }))
-      useAppStore.getState().updateCurrentJob({ status: 'generating', progress: st.progress, step: st.step })
+      const queued = (st as { queue_position?: number | null }).queue_position
+      const step = st.status === 'pending' && queued ? `Queued — position ${queued}` : st.step
+      setRunState((s) => ({ ...s, blockProgress: st.progress ?? s.blockProgress, blockStep: step ?? 'Generating…' }))
+      useAppStore.getState().updateCurrentJob({ status: 'generating', progress: st.progress, step })
     }
   } else {
     if (ext?.input === 'mesh'  && !nodeInputPath) throw new Error(`${ext.name} needs an incoming mesh connection`)

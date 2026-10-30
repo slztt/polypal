@@ -1186,7 +1186,31 @@ export function setupIpcHandlers(pythonBridge: PythonBridge, getWindow: WindowGe
       model_sources?: unknown
       weight_groups?: unknown
       weight_variants?: unknown
+      editor?: unknown
     }[]
+  }
+
+  // Mesh Editor plugin contract: a process node with input and output "mesh"
+  // may declare `"editor": true` or `"editor": { "label", "category",
+  // "description", "icon" }` to appear as a tool in the Generate page's editor.
+  function normalizeEditorTool(raw: unknown, input: string, output: string) {
+    if (raw === undefined || raw === false || raw === null) return undefined
+    if (input !== 'mesh' || output !== 'mesh') {
+      throw new Error('manifest.json: "editor" tools must take and return a mesh')
+    }
+    const info = raw === true ? {} : raw
+    if (typeof info !== 'object' || Array.isArray(info)) {
+      throw new Error('manifest.json: "editor" must be true or an object')
+    }
+    const field = (key: string, max: number) => {
+      const value = (info as Record<string, unknown>)[key]
+      return typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : undefined
+    }
+    return {
+      label:       field('label', 60),
+      category:    field('category', 30)?.toLowerCase(),
+      description: field('description', 240),
+    }
   }
 
   function parseExtensionManifest(parsed: ParsedManifest, fallbackId: string, trustedRepos: Set<string>, builtin = false) {
@@ -1249,6 +1273,9 @@ export function setupIpcHandlers(pythonBridge: PythonBridge, getWindow: WindowGe
         output:         n.output ?? 'mesh'  as const,
         paramsSchema:   n.params_schema ?? parsed.params_schema ?? [],
         paramDefaults:  { ...(parsed.param_defaults ?? {}), ...(n.param_defaults ?? {}) },
+        editor:         parsed.type === 'process'
+          ? normalizeEditorTool(n.editor, n.input ?? 'image', n.output ?? 'mesh')
+          : undefined,
         hfRepo:         n.hf_repo,
         downloadCheck:  n.download_check,
         hfSkipPrefixes: n.hf_skip_prefixes,

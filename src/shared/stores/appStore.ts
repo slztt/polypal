@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { LengthUnit } from '@shared/utils/units'
+import type { GpuPolicy, JobPriority, ToolPolicy } from '@shared/api/polypalApi'
 
 export type UiScale = 'small' | 'medium' | 'large' | 'very-large'
 export type BackendStatus = 'not_started' | 'starting' | 'ready' | 'error'
@@ -133,10 +135,12 @@ interface AppState {
   showToast: (message: string, durationMs?: number) => void
   hideToast: () => void
 
-  // Mesh URL history (undo/redo)
+  // Mesh URL history (undo/redo). Labels describe the change that produced each entry.
   meshHistory: string[]
+  meshHistoryLabels: string[]
   historyIndex: number
-  pushMeshUrl: (url: string) => void
+  pushMeshUrl: (url: string, label?: string) => void
+  jumpToHistory: (index: number) => void
   undoMesh: () => void
   redoMesh: () => void
   clearMeshHistory: () => void
@@ -150,6 +154,30 @@ interface AppState {
   setUseAtkinsonFont: (v: boolean) => void
   uiScale: UiScale
   setUiScale: (v: UiScale) => void
+
+  // Real-world units used for display and size input
+  units: LengthUnit
+  setUnits: (u: LengthUnit) => void
+
+  // Viewer diagnostics
+  contactShadows: boolean
+  setContactShadows: (v: boolean) => void
+
+  // Copilot: which tool risks wait for approval
+  copilotToolPolicy: ToolPolicy
+  setCopilotToolPolicy: (p: ToolPolicy) => void
+
+  // GPU management (mirrored to the backend on startup and on change)
+  gpuPolicy: GpuPolicy
+  setGpuPolicy: (p: Partial<GpuPolicy>) => void
+  generationPriority: JobPriority
+  setGenerationPriority: (p: JobPriority) => void
+
+  // Mesh editor side panel
+  editorOpen: boolean
+  setEditorOpen: (v: boolean) => void
+  editPlanner: 'rules' | 'ai'
+  setEditPlanner: (v: 'rules' | 'ai') => void
 
   // 3D viewer lighting
   lightSettings: LightSettings
@@ -222,12 +250,21 @@ export const useAppStore = create<AppState>()(
       hideToast: () => set({ toast: null }),
 
       meshHistory: [],
+      meshHistoryLabels: [],
       historyIndex: -1,
 
-      pushMeshUrl: (url) => {
-        const { meshHistory, historyIndex } = get()
+      pushMeshUrl: (url, label) => {
+        const { meshHistory, meshHistoryLabels, historyIndex } = get()
         const next = [...meshHistory.slice(0, historyIndex + 1), url]
-        set({ meshHistory: next, historyIndex: next.length - 1 })
+        const labels = [...meshHistoryLabels.slice(0, historyIndex + 1), label ?? (next.length === 1 ? 'Original' : 'Edit')]
+        set({ meshHistory: next, meshHistoryLabels: labels, historyIndex: next.length - 1 })
+      },
+
+      jumpToHistory: (index) => {
+        const { meshHistory } = get()
+        if (index < 0 || index >= meshHistory.length) return
+        set({ historyIndex: index })
+        get().updateCurrentJob({ outputUrl: meshHistory[index] })
       },
 
       undoMesh: () => {
@@ -246,7 +283,30 @@ export const useAppStore = create<AppState>()(
         get().updateCurrentJob({ outputUrl: meshHistory[newIndex] })
       },
 
-      clearMeshHistory: () => set({ meshHistory: [], historyIndex: -1 }),
+      clearMeshHistory: () => set({ meshHistory: [], meshHistoryLabels: [], historyIndex: -1 }),
+
+      units: 'cm',
+      setUnits: (u) => set({ units: u }),
+
+      contactShadows: true,
+      setContactShadows: (v) => set({ contactShadows: v }),
+
+      copilotToolPolicy: 'confirm_heavy',
+      setCopilotToolPolicy: (p) => set({ copilotToolPolicy: p }),
+
+      gpuPolicy: { unload_before_launch: 'auto', idle_unload_minutes: 15 },
+      setGpuPolicy: (p) => {
+        const next = { ...get().gpuPolicy, ...p }
+        set({ gpuPolicy: next })
+        void pushGpuPolicy(get().apiUrl, next)
+      },
+      generationPriority: 'normal',
+      setGenerationPriority: (p) => set({ generationPriority: p }),
+
+      editorOpen: false,
+      setEditorOpen: (v) => set({ editorOpen: v }),
+      editPlanner: 'rules',
+      setEditPlanner: (v) => set({ editPlanner: v }),
 
       showRamIndicator: true,
       setShowRamIndicator: (v) => set({ showRamIndicator: v }),
@@ -288,6 +348,8 @@ export const useAppStore = create<AppState>()(
           if (!result.success) throw new Error(result.error ?? 'Failed to start backend')
           const { apiUrl } = await window.electron.app.info()
           set({ backendStatus: 'ready', apiUrl })
+          // The backend keeps the GPU policy in memory; restore the user's choice.
+          void pushGpuPolicy(apiUrl, get().gpuPolicy)
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
           set({ backendStatus: 'error', backendError: msg })
@@ -315,7 +377,27 @@ export const useAppStore = create<AppState>()(
         useAtkinsonFont: state.useAtkinsonFont,
         uiScale: state.uiScale,
         lightSettings: state.lightSettings,
+        units: state.units,
+        contactShadows: state.contactShadows,
+        copilotToolPolicy: state.copilotToolPolicy,
+        gpuPolicy: state.gpuPolicy,
+        generationPriority: state.generationPriority,
+        editorOpen: state.editorOpen,
+        editPlanner: state.editPlanner,
       }),
     }
   )
 )
+
+async function pushGpuPolicy(apiUrl: string, policy: GpuPolicy): Promise<void> {
+  if (!apiUrl) return
+  try {
+    await fetch(`${apiUrl}/gpu/policy`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(policy),
+    })
+  } catch {
+    // Backend not reachable yet; initApp pushes it again once ready.
+  }
+}

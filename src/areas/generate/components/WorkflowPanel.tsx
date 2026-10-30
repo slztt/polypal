@@ -20,6 +20,7 @@ import { PICKER_LABELS, openParamPicker, resolvePickerIntent } from '@shared/uti
 import { FloatInput, IntInput, PickerIcon } from '@shared/components/ui'
 import { isMissingWeightVariant, withWeightVariantAvailability } from '@shared/utils/weightVariants'
 import ChatPanel from './ChatPanel'
+import LaunchCheck from './LaunchCheck'
 
 type PanelMode = 'basic' | 'chat'
 
@@ -594,6 +595,7 @@ function EmbeddedCanvas({ workflow, allExtensions }: {
             <span className="text-[10px] text-amber-300 font-medium">{firstPreflightIssue}</span>
           </div>
         )}
+        <LaunchCheck nodes={nodes as WFNode[]} allExtensions={allExtensions} disabled={isRunning} />
         {isRunning ? (
           <button onClick={() => cancel()}
             className="w-full py-2.5 rounded-lg text-sm font-semibold bg-red-600 hover:bg-red-700 text-white transition-colors">

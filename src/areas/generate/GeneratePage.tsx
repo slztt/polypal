@@ -7,6 +7,10 @@ import { ColorPicker } from '@shared/components/ui'
 import GenerationHUD from './components/GenerationHUD'
 import Viewer3D from './components/Viewer3D'
 import WorkflowPanel from './components/WorkflowPanel'
+import MeshEditorPanel from '@areas/editor/MeshEditorPanel'
+import { useCurrentMesh, useMeshStats } from '@areas/editor/useMeshEditing'
+import { meshPathFromUrl } from './meshPath'
+import QueueIndicator from './components/QueueIndicator'
 import { getDefaultAssetLibraryService } from './assetLibraryService'
 import { buildOrcaSlicerDeepLink, canOpenInOrcaSlicer } from './orcaSlicerLink'
 import { resolveAssetLibraryOpenTarget, type ProjectedAssetLibraryEntry } from './assetLibraryProjection'
@@ -56,11 +60,13 @@ function ExportDropdown({
   onClose,
   onOpenInSlicer,
   canOpenInSlicer,
+  realWorld,
 }: {
   onExport: (f: 'glb' | 'obj' | 'stl' | 'ply') => void
   onClose: () => void
   onOpenInSlicer: () => void
   canOpenInSlicer: boolean
+  realWorld: boolean
 }) {
   return (
     <div className="absolute top-full left-0 mt-1 z-50 bg-zinc-900 border border-zinc-700/60 rounded-xl p-1 flex flex-col gap-0.5 min-w-[150px] shadow-xl">
@@ -72,6 +78,7 @@ function ExportDropdown({
         >
           <span className="text-xs font-mono font-semibold text-zinc-200">.{fmt}</span>
           <span className="text-[10px] text-zinc-500">{desc}</span>
+          {realWorld && fmt !== 'glb' && <span className="ml-auto text-[9px] text-accent-light font-mono">mm</span>}
         </button>
       ))}
       {canOpenInSlicer && (
@@ -701,6 +708,12 @@ export default function GeneratePage(): JSX.Element {
   const canUndo = useAppStore((s) => s.historyIndex > 0)
   const canRedo = useAppStore((s) => s.historyIndex < s.meshHistory.length - 1)
   const { optimizeMesh, smoothMesh, importMesh } = useApi()
+  const editorOpen = useAppStore((s) => s.editorOpen)
+  const setEditorOpen = useAppStore((s) => s.setEditorOpen)
+  const currentMesh = useCurrentMesh()
+  // Real-world sized meshes export in millimetres (what slicers and CAD expect).
+  const { stats: currentStats } = useMeshStats(currentMesh.workspace ? currentMesh.path : null)
+  const realWorld = currentStats?.units === 'm'
   const assetLibraryService = useMemo(() => getDefaultAssetLibraryService(), [])
 
   useEffect(() => {
@@ -740,6 +753,7 @@ export default function GeneratePage(): JSX.Element {
       const el = document.activeElement as HTMLElement | null
       if (el && (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el.isContentEditable)) return
       if (e.key === 'Escape') { setGizmoMode((m) => (m ? null : m)); return }
+      if (e.key.toLowerCase() === 'e' && !e.ctrlKey && !e.metaKey) { setEditorOpen(!useAppStore.getState().editorOpen); return }
       if (!meshSelected && !selectedPointLightId) return
       const k = e.key.toLowerCase()
       if (k === 'w') setGizmoMode('translate')
@@ -748,7 +762,7 @@ export default function GeneratePage(): JSX.Element {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [hasModel, meshSelected, selectedPointLightId])
+  }, [hasModel, meshSelected, selectedPointLightId, setEditorOpen])
 
   useEffect(() => {
     if (openPanel !== 'library' || libraryLoaded || libraryLoading) return
@@ -765,12 +779,13 @@ export default function GeneratePage(): JSX.Element {
   function handleExport(format: 'glb' | 'obj' | 'stl' | 'ply') {
     if (!currentJob?.outputUrl) return
     const stem = `polypal-${Date.now()}`
+    const units = realWorld ? 'mm' : 'm'
     const link = document.createElement('a')
     if (format === 'glb') {
       link.href = `${apiUrl}${currentJob.outputUrl}`
     } else {
       const path = encodeURIComponent(currentJob.outputUrl.replace('/workspace/', ''))
-      link.href = `${apiUrl}/optimize/export?path=${path}&format=${format}`
+      link.href = `${apiUrl}/optimize/export?path=${path}&format=${format}&units=${units}`
     }
     link.download = `${stem}.${format}`
     link.click()
@@ -792,13 +807,7 @@ export default function GeneratePage(): JSX.Element {
   }
 
   function getOptimizePath(url: string): string {
-    if (url.startsWith('/workspace/')) {
-      return url.slice('/workspace/'.length)
-    }
-    if (url.startsWith('/optimize/serve-file?path=')) {
-      return decodeURIComponent(url.split('path=')[1] ?? '')
-    }
-    return url
+    return meshPathFromUrl(url) ?? url
   }
 
   async function handleImportMesh() {
@@ -818,7 +827,7 @@ export default function GeneratePage(): JSX.Element {
         createdAt: Date.now(),
       }
       setCurrentJob(job)
-      pushMeshUrl(url)
+      pushMeshUrl(url, 'Imported')
     } finally {
       setImporting(false)
     }
@@ -895,7 +904,7 @@ export default function GeneratePage(): JSX.Element {
       const path = getOptimizePath(currentJob.outputUrl)
       const { url } = await smoothMesh(path, iterations)
       updateCurrentJob({ outputUrl: url })
-      pushMeshUrl(url)
+      pushMeshUrl(url, `Smooth ×${iterations}`)
       setOpenPanel(null)
     } catch (err) {
       showError(err instanceof Error ? err.message : String(err))
@@ -911,7 +920,7 @@ export default function GeneratePage(): JSX.Element {
       const path = getOptimizePath(currentJob.outputUrl)
       const { url } = await optimizeMesh(path, targetFaces)
       updateCurrentJob({ outputUrl: url })
-      pushMeshUrl(url)
+      pushMeshUrl(url, `Decimate to ${targetFaces.toLocaleString()}`)
       setOpenPanel(null)
     } catch (err) {
       showError(err instanceof Error ? err.message : String(err))
@@ -1104,6 +1113,7 @@ export default function GeneratePage(): JSX.Element {
                     onClose={() => setOpenPanel(null)}
                     onOpenInSlicer={() => { void handleOpenInOrcaSlicer() }}
                     canOpenInSlicer={showOpenInSlicer}
+                    realWorld={realWorld}
                   />
                 )}
               </div>
@@ -1178,8 +1188,28 @@ export default function GeneratePage(): JSX.Element {
             </>
           )}
 
+          <div className="ml-auto flex items-center gap-2">
+            <QueueIndicator />
+            <button
+              onClick={() => setEditorOpen(!editorOpen)}
+              title="Mesh editor (E)"
+              aria-pressed={editorOpen}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-colors
+                ${editorOpen
+                  ? 'bg-accent/15 border-accent/40 text-accent-light'
+                  : 'bg-zinc-800 border-zinc-700/50 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600'
+                }`}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+              </svg>
+              Editor
+            </button>
+          </div>
+
           {/* Light — always visible, pushed to the right */}
-          <div className="relative ml-auto">
+          <div className="relative">
             <button
               onClick={() => setOpenPanel((p) => (p === 'light' ? null : 'light'))}
               title="Lighting"
@@ -1273,6 +1303,8 @@ export default function GeneratePage(): JSX.Element {
           <GenerationHUD />
         </div>
       </div>
+
+      {editorOpen && <MeshEditorPanel onClose={() => setEditorOpen(false)} />}
     </>
   )
 }

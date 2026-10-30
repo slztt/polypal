@@ -27,6 +27,14 @@ export interface ExtensionNode {
   hasModelSources?: boolean
   weightGroups?:    string[]
   weightVariants?:  WeightVariantsInfo
+  /** Process nodes only: exposes the node as a Mesh Editor tool (see docs/editor-plugins.md). */
+  editor?:          EditorToolInfo
+}
+
+export interface EditorToolInfo {
+  label?:       string
+  category?:    string
+  description?: string
 }
 
 export interface WeightVariantsInfo {
