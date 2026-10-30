@@ -10,6 +10,13 @@ import { ModelLibraryModal } from '@shared/components/ui/ModelLibraryModal'
 import type { LlmModel } from '@shared/stores/llmModelsStore'
 import { formatBytes } from '@shared/utils/format'
 import { Section, Card, SegmentedControl } from '@shared/ui'
+import type { ToolPolicy } from '@shared/api/polypalApi'
+
+const TOOL_POLICY_OPTIONS: { value: ToolPolicy; label: string; desc: string }[] = [
+  { value: 'confirm_heavy', label: 'Ask for heavy actions (recommended)', desc: 'Running workflows, regenerating and unloading models need approval; mesh edits apply directly (they are undoable).' },
+  { value: 'confirm_all',   label: 'Ask for every change',               desc: 'Only read-only tools (inspecting, measuring, history) run without asking.' },
+  { value: 'auto',          label: 'Never ask',                          desc: 'The copilot runs every tool immediately.' },
+]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -125,6 +132,8 @@ export function AgentSection(): JSX.Element {
     setProvider, setExternal, setDefaultThinking,
   } = useAgentStore()
   const apiUrl = useAppStore((s) => s.apiUrl)
+  const toolPolicy = useAppStore((s) => s.copilotToolPolicy)
+  const setToolPolicy = useAppStore((s) => s.setCopilotToolPolicy)
 
   // Local engine
   const [engineInstalled, setEngineInstalled] = useState<boolean | null>(null)
@@ -403,6 +412,27 @@ export function AgentSection(): JSX.Element {
               </Block>
             </Card>
           )}
+
+          <Card title="Tool approval" description="Which copilot actions wait for you to approve them in the chat.">
+            <div className="px-4 py-3 flex flex-col gap-3">
+              {TOOL_POLICY_OPTIONS.map((opt) => (
+                <label key={opt.value} className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="radio"
+                    name="tool-policy"
+                    value={opt.value}
+                    checked={toolPolicy === opt.value}
+                    onChange={() => setToolPolicy(opt.value)}
+                    className="mt-0.5 accent-green-500"
+                  />
+                  <div>
+                    <p className="text-xs font-medium text-zinc-300 group-hover:text-zinc-100 transition-colors">{opt.label}</p>
+                    <p className="text-[11px] text-zinc-500">{opt.desc}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </Card>
 
           <Card title="Thinking" description="Default mode — can be changed on the fly in the chat via the brain icon.">
             <div className="px-4 py-3 flex flex-col gap-3">
