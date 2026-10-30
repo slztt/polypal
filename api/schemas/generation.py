@@ -9,6 +9,8 @@ class JobStatus(BaseModel):
     step: Optional[str] = None    # Human-readable current step
     output_url: Optional[str] = None
     error: Optional[str] = None
+    priority: Optional[str] = None          # high | normal | low
+    queue_position: Optional[int] = None    # 1 = next to start (pending jobs only)
 
 
 class GenerateFromArtifactRequest(BaseModel):

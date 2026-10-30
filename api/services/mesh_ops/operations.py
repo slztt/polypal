@@ -32,15 +32,11 @@ def _output_path(context: MeshOpContext, prefix: str) -> Path:
 
 
 def _load_single_mesh(input_path: Path, trimesh_module):
-    loaded = trimesh_module.load(str(input_path))
-    if isinstance(loaded, trimesh_module.Scene):
-        geometries = list(loaded.geometry.values())
-        return (
-            trimesh_module.util.concatenate(geometries)
-            if len(geometries) > 1
-            else geometries[0]
-        )
-    return loaded
+    # flatten_scene bakes node transforms; concatenating geometry.values()
+    # would drop a gizmo pose baked at scene level by /optimize/transform.
+    from services.mesh_io import flatten_scene
+
+    return flatten_scene(trimesh_module.load(str(input_path)), trimesh_module)
 
 
 def _raw_geometry(mesh, trimesh_module):

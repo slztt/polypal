@@ -8,7 +8,8 @@ import trimesh
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response, FileResponse
 
-from services import imported_sources
+from services import imported_sources, provenance
+from services.mesh_io import flatten_scene
 # Import the module (not the name) so WORKSPACE_DIR is read at call time: the
 # settings endpoint rebinds it when the user moves the workspace.
 import services.generator_registry as registry
@@ -44,29 +45,13 @@ def _to_single_mesh(loaded: object) -> "trimesh.Trimesh":
     """Flatten a loaded GLB into one Trimesh, baking scene-graph node transforms.
 
     ``trimesh.util.concatenate(scene.geometry.values())`` would DROP the node
-    transforms and misassemble a multi-node scene, so flatten at the scene level
-    where the graph transforms are applied.
+    transforms and misassemble a multi-node scene; ``flatten_scene`` flattens
+    at the scene level where the graph transforms are applied.
     """
-    if isinstance(loaded, trimesh.Trimesh):
-        return loaded
-    if isinstance(loaded, trimesh.Scene):
-        if len(loaded.geometry) == 0:
-            raise HTTPException(422, "Mesh contains no geometry")
-        # Bake the scene-graph node transforms into a single mesh. The spelling
-        # varies across trimesh versions — to_mesh()/to_geometry() are the modern
-        # APIs (4.6+); dump(concatenate=True) is the pre-removal fallback for 4.5.
-        for flatten in (lambda s: s.to_mesh(), lambda s: s.to_geometry(), lambda s: s.dump(concatenate=True)):
-            try:
-                result = flatten(loaded)
-            except (AttributeError, TypeError):
-                continue
-            if isinstance(result, trimesh.Trimesh):
-                return result
-            if isinstance(result, (list, tuple)) and result:
-                return trimesh.util.concatenate(result)
-        # Fallback: concatenate the geometry as-is (may ignore node transforms).
-        return trimesh.util.concatenate(list(loaded.geometry.values()))
-    raise HTTPException(422, "Unsupported mesh contents")
+    try:
+        return flatten_scene(loaded, trimesh)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 def _scale_to_print_size(mesh: "trimesh.Trimesh", longest_mm: float = DEFAULT_PRINT_LONGEST_MM) -> None:
@@ -164,7 +149,12 @@ def export_for_slicer(fmt: str, token: str, filename: str):
     # thing this corrects — lay an upright model on its side.
     if source_suffix in GLTF_SUFFIXES:
         mesh.apply_transform(trimesh.transformations.rotation_matrix(math.pi / 2, [1, 0, 0]))
-    _normalize_print_scale(mesh)
+    if provenance.units_for(full_path) == "m":
+        # The user gave this model a real-world size (stored in metres, the
+        # glTF convention). Slicers read STL/OBJ as millimetres.
+        mesh.apply_scale(1000.0)
+    else:
+        _normalize_print_scale(mesh)
 
     data = mesh.export(file_type=fmt)
     if isinstance(data, str):
@@ -194,12 +184,8 @@ def export_mesh(fmt: str, path: str):
         return FileResponse(str(full_path), media_type="model/gltf-binary")
 
     # Load and flatten scene to a single mesh
-    loaded = trimesh.load(str(full_path))
-    if isinstance(loaded, trimesh.Scene):
-        geoms = list(loaded.geometry.values())
-        mesh = trimesh.util.concatenate(geoms) if len(geoms) > 1 else geoms[0]
-    else:
-        mesh = loaded
+    # Bake scene-graph transforms (gizmo edits) into the exported geometry.
+    mesh = _to_single_mesh(trimesh.load(str(full_path)))
 
     buf = io.BytesIO()
     if fmt == "stl":

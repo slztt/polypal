@@ -1,6 +1,6 @@
 {
   "name": "polypal",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "PolyPal — local AI-powered 3D mesh generation, editing and diagnostics",
   "main": "./out/main/index.js",
   "author": "PolyPal",

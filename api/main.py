@@ -12,7 +12,8 @@ from fastapi import HTTPException
 from services.stdio_utf8 import ensure_utf8_stdio
 ensure_utf8_stdio()  # must run before any print/logging hits the pipe
 
-from routers import generation, model, optimize, status, settings, extensions, export, workflow_runs, agent, llm
+from routers import generation, model, optimize, status, settings, extensions, export, workflow_runs, agent, llm, edit, gpu
+from services.app_info import APP_NAME, APP_VERSION
 
 
 @asynccontextmanager
@@ -20,6 +21,9 @@ async def lifespan(app: FastAPI):
     # Startup: initialize the registry (instantiates all adapters)
     from services.generator_registry import generator_registry
     generator_registry.initialize()
+    # Unload 3D generators left idle past the GPU policy's limit.
+    from services.gpu import reaper
+    reaper.start(gpu.reap_idle_generators)
     yield
     # Shutdown: unload all models and stop the local LLM server
     generator_registry.unload_all()
@@ -35,8 +39,8 @@ logging.getLogger("uvicorn.access").addFilter(_StatusFilter())
 
 
 app = FastAPI(
-    title="PolyPal API",
-    version="0.4.3",
+    title=f"{APP_NAME} API",
+    version=APP_VERSION,
     lifespan=lifespan,
 )
 
@@ -60,6 +64,8 @@ app.include_router(export.router,          prefix="/export")
 app.include_router(workflow_runs.router,   prefix="/workflow-runs")
 app.include_router(agent.router)
 app.include_router(llm.router,             prefix="/llm")
+app.include_router(edit.router)
+app.include_router(gpu.router)
 
 # Serve generated files from workspace — dynamic so path changes take effect immediately
 @app.get("/workspace/{full_path:path}")

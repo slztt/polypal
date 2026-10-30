@@ -435,6 +435,53 @@ def _auth_headers(base_url: str, api_key: Optional[str]) -> dict:
     return headers
 
 
+class ResolvedProvider:
+    """Where to send chat completions, and how. ``release()`` frees a held local slot."""
+
+    def __init__(self, base_url: str, headers: dict, extra: dict, send_images: bool, slot=None) -> None:
+        self.base_url = base_url
+        self.headers = headers
+        self.extra = extra
+        self.send_images = send_images
+        self._slot = slot
+
+    def release(self) -> None:
+        if self._slot is not None:
+            self._slot.release()
+            self._slot = None
+
+
+class ProviderUnavailable(RuntimeError):
+    pass
+
+
+async def resolve_provider(
+    provider_type: str,
+    model: str,
+    base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
+    thinking: str = "auto",
+) -> ResolvedProvider:
+    """Shared by the copilot and the AI edit planner."""
+    if provider_type == "local":
+        model = model or llm_server.default_model_id()
+        try:
+            spec = llm_server.resolve_model(model)
+            # hold=True: the slot stays claimed until release(), so neither the
+            # idle reaper nor a model loading elsewhere can evict it mid-answer.
+            slot = await asyncio.to_thread(llama_pool.ensure, model, spec, True)
+        except Exception as e:  # noqa: BLE001
+            raise ProviderUnavailable(f"Could not start the local LLM: {e}") from e
+        extra: dict = dict(llm_server.sampling_for(model))
+        if thinking == "off":
+            extra["chat_template_kwargs"] = {"enable_thinking": False}
+        return ResolvedProvider(slot.base_url, {}, extra, bool(spec.get("vision")), slot)
+    if not base_url:
+        raise ProviderUnavailable("No provider URL configured. Set one in Settings → Agent.")
+    url = base_url.rstrip("/")
+    return ResolvedProvider(url, _auth_headers(url, api_key), {}, True)
+
+
 class ExternalModelsRequest(BaseModel):
     base_url: str
     api_key: str = ""

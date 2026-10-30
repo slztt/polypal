@@ -64,12 +64,15 @@ class MeshOp:
     category: str
     destructive: bool = False
     undoable: bool = True
+    # One-line summary for the editor panel and the AI edit planner.
+    description: str = ""
 
     def describe(self) -> dict[str, Any]:
         """Return the public, serializable part of this registry entry."""
         return {
             "id": self.id,
             "label": self.label,
+            "description": self.description,
             "params_schema": deepcopy(list(self.params_schema)),
             "destructive": self.destructive,
             "undoable": self.undoable,

@@ -4,11 +4,13 @@ import threading
 import time
 import traceback
 import uuid
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Any, Dict, Optional, Union
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException, BackgroundTasks
+from pydantic import BaseModel
 from services.generators.base import smooth_progress, GenerationCancelled
+from services import gpu, provenance
+from services.priority_queue import PriorityJobQueue, normalize_priority
 
 import re as _re
 # Import the module (not the name) so WORKSPACE_DIR is read at call time: the
@@ -37,10 +39,8 @@ _job_generators: Dict[str, object] = {}
 # A pinned generation owns the complete switch/load/generate lifecycle.  Keeping
 # that lifecycle on one dedicated worker provides process-wide serialization
 # without parking default-executor workers on a blocking lock acquisition.
-_pinned_generation_executor = ThreadPoolExecutor(
-    max_workers=1,
-    thread_name_prefix="polypal-pinned-generation",
-)
+# Waiting jobs are ordered by priority (high > normal > low), then arrival.
+_generation_queue = PriorityJobQueue("polypal-pinned-generation")
 
 _JOB_TTL = 1800  # purge terminal jobs after 30 minutes
 
@@ -109,6 +109,7 @@ async def generate_from_image(
     enable_texture: bool = Form(False),
     texture_resolution: int = Form(1024),
     params: str = Form("{}"),
+    priority: str = Form("normal"),
 ):
     if not image.content_type or not image.content_type.startswith("image/"):
         raise HTTPException(400, "File must be an image")
@@ -131,7 +132,6 @@ async def generate_from_image(
     except (json.JSONDecodeError, TypeError):
         model_params = {}
 
-    job_id      = str(uuid.uuid4())
     image_bytes = await image.read()
     full_params = {
         "remesh":             remesh,
@@ -139,18 +139,50 @@ async def generate_from_image(
         "texture_resolution": texture_resolution,
         **model_params,
     }
+    return _queue_image_job(
+        background_tasks, image_bytes, full_params, collection, output_kind, model_id,
+        priority=priority, filename=getattr(image, "filename", None),
+    )
 
+
+def _model_param_schema(model_id: str) -> list:
+    try:
+        return list(generator_registry.params_schema(model_id) or [])
+    except Exception:  # noqa: BLE001 — a schema lookup must never block a launch
+        return []
+
+
+def _queue_image_job(
+    background_tasks: BackgroundTasks,
+    image_bytes: bytes,
+    params: dict,
+    collection: str,
+    output_kind: str,
+    model_id: str,
+    *,
+    priority: str = "normal",
+    filename: Optional[str] = None,
+    regenerated_from: Optional[str] = None,
+) -> dict:
+    # Pin random seeds now so the provenance record can replay this exact run.
+    params, deterministic = provenance.resolve_seed(params, _model_param_schema(model_id))
+    priority = normalize_priority(priority)
+    job_id = str(uuid.uuid4())
     _purge_old_jobs()
 
-    job = JobStatus(job_id=job_id, status="pending", progress=0)
+    job = JobStatus(job_id=job_id, status="pending", progress=0, priority=priority)
     _jobs[job_id] = job
     _cancel_events[job_id] = threading.Event()
 
+    meta = {
+        "filename": filename,
+        "deterministic": deterministic,
+        "regenerated_from": regenerated_from,
+    }
     background_tasks.add_task(
-        _run_generation, job_id, image_bytes, full_params, collection, output_kind, model_id
+        _run_generation, job_id, image_bytes, params, collection, output_kind, model_id, priority, meta,
     )
-
-    return {"job_id": job_id}
+    return {"job_id": job_id, "priority": priority, "seed": params.get("seed")}
 
 
 @router.post("/from-artifact")
@@ -190,7 +222,76 @@ async def job_status(job_id: str):
     job = _jobs.get(job_id)
     if not job:
         raise HTTPException(404, f"Job {job_id} not found")
+    if job.status == "pending":
+        job.queue_position = _generation_queue.position(job_id)
+    else:
+        job.queue_position = None
     return job
+
+
+@router.get("/queue")
+async def queue_snapshot():
+    """Running job plus waiting jobs in the order they will start."""
+    snapshot = _generation_queue.snapshot()
+    for item in snapshot["queued"]:
+        job = _jobs.get(item["job_id"])
+        item["step"] = job.step if job else None
+    running = _jobs.get(snapshot["running"]) if snapshot["running"] else None
+    snapshot["running_progress"] = running.progress if running else None
+    snapshot["running_step"] = running.step if running else None
+    return snapshot
+
+
+class PriorityUpdate(BaseModel):
+    priority: str
+
+
+@router.post("/queue/{job_id}/priority")
+async def set_job_priority(job_id: str, body: PriorityUpdate):
+    priority = normalize_priority(body.priority)
+    if not _generation_queue.reprioritize(job_id, priority):
+        raise HTTPException(409, "Job is not waiting in the queue")
+    job = _jobs.get(job_id)
+    if job is not None:
+        job.priority = priority
+    return {"job_id": job_id, "priority": priority, "position": _generation_queue.position(job_id)}
+
+
+class RegenerateRequest(BaseModel):
+    path: str
+    priority: str = "normal"
+    new_seed: bool = False
+
+
+@router.post("/regenerate")
+async def regenerate(body: RegenerateRequest, background_tasks: BackgroundTasks):
+    """Replay the generation a mesh descends from, with the exact same settings."""
+    from routers.edit import resolve_mesh_path
+
+    mesh_path = resolve_mesh_path(body.path)
+    record = provenance.root_generation(mesh_path)
+    if record is None:
+        raise HTTPException(404, "No generation history is recorded for this model")
+    generation = record["generation"]
+    model_id = generation["model_id"]
+    try:
+        generator_registry.get_generator(model_id)
+        output_kind = generator_registry.get_manifest(model_id).get("output", "mesh")
+    except (KeyError, ValueError) as exc:
+        raise HTTPException(409, f"Model {model_id} is no longer installed") from exc
+    image_bytes = provenance.load_input_image(record)
+    if image_bytes is None:
+        raise HTTPException(409, "The original input image is no longer available")
+    params = dict(generation.get("params") or {})
+    if body.new_seed and "seed" in params:
+        params["seed"] = -1
+    return _queue_image_job(
+        background_tasks, image_bytes, params,
+        sanitize_collection(generation.get("collection") or "Default"), output_kind, model_id,
+        priority=body.priority,
+        filename=(generation.get("input") or {}).get("filename"),
+        regenerated_from=record.get("output"),
+    )
 
 
 @router.post("/cancel/{job_id}")
@@ -224,6 +325,8 @@ async def _run_generation(
     collection: str = "Default",
     output_kind: str = "mesh",
     model_id: Optional[str] = None,
+    priority: str = "normal",
+    meta: Optional[Dict[str, Any]] = None,
 ) -> None:
     # Pinned jobs share one model lifecycle. Switching is deliberately deferred
     # until this job runs on the dedicated worker: request-time switches can
@@ -232,22 +335,19 @@ async def _run_generation(
     # blocked on a lock, so cancelling a waiter cannot orphan queue ownership or
     # starve the worker that performs generation.
     loop = asyncio.get_running_loop()
-    executor = _pinned_generation_executor if model_id is not None else None
     # Shown while this job waits behind another one on the single worker;
     # _run_generation_impl clears it as soon as the job actually starts.
     queued_job = _jobs.get(job_id)
-    if queued_job is not None and executor is not None:
-        queued_job.step = "Waiting for the previous generation…"
-    future = loop.run_in_executor(
-        executor,
-        _run_generation_impl,
-        job_id,
-        model_input,
-        params,
-        collection,
-        output_kind,
-        model_id,
-    )
+    impl_args = (job_id, model_input, params, collection, output_kind, model_id, meta)
+    if model_id is not None:
+        if queued_job is not None:
+            queued_job.step = "Waiting for the previous generation…"
+        future = asyncio.wrap_future(
+            _generation_queue.submit(job_id, priority, _run_generation_impl, *impl_args),
+            loop=loop,
+        )
+    else:
+        future = loop.run_in_executor(None, _run_generation_impl, *impl_args)
     try:
         await future
     except asyncio.CancelledError:
@@ -271,12 +371,16 @@ def _run_generation_impl(
     collection: str,
     output_kind: str,
     model_id: Optional[str],
+    meta: Optional[Dict[str, Any]] = None,
 ) -> None:
     if job_id in _cancelled:
         return
     job = _jobs[job_id]
     job.status = "running"
     job.step = None
+    started_at = time.monotonic()
+    if model_id is not None:
+        _mark_busy(model_id, True)
 
     def progress_cb(pct: int, step: str = "") -> None:
         # Monotonic: the loading phase walks the bar up on a background thread and
@@ -301,6 +405,10 @@ def _run_generation_impl(
         status_reader = (lambda: generator_registry.model_status(model_id)) \
             if model_id is not None else generator_registry.active_status
         status = status_reader()
+        if not status["loaded"] and model_id is not None:
+            # GPU policy: release other PolyPal allocations first if this
+            # model would not otherwise fit in free VRAM.
+            _free_vram_for(model_id, params, progress_cb)
         if not status["loaded"]:
             active = status
             model_name = active['name']
@@ -363,6 +471,8 @@ def _run_generation_impl(
             except (OSError, ValueError) as exc:
                 raise ValueError("Generated scene output is not a valid workspace scene") from exc
 
+        _record_generation(output_path, model_input, params, collection, model_id, meta, started_at, job)
+
         job.status   = "done"
         job.progress = 100
         _completed_at[job_id] = time.monotonic()
@@ -389,3 +499,56 @@ def _run_generation_impl(
         _completed_at[job_id] = time.monotonic()
     finally:
         _job_generators.pop(job_id, None)
+        if model_id is not None:
+            _mark_busy(model_id, False)
+            gpu.touch_generator(model_id)
+
+
+def _mark_busy(model_id: str, busy: bool) -> None:
+    from routers.gpu import busy_models
+
+    if busy:
+        busy_models.add(model_id)
+    else:
+        busy_models.discard(model_id)
+
+
+def _free_vram_for(model_id: str, params: dict, progress_cb) -> None:
+    try:
+        from routers.gpu import free_vram_before_launch
+
+        released = free_vram_before_launch(model_id, params)
+    except Exception:  # noqa: BLE001 — the policy is advisory; never fail a launch
+        return
+    if released:
+        progress_cb(0, f"Freed VRAM ({', '.join(released)})…")
+
+
+def _record_generation(output_path, model_input, params, collection, model_id, meta, started_at, job) -> None:
+    """Best-effort provenance sidecar for a finished generation."""
+    if model_id is None:
+        return
+    meta = meta or {}
+    try:
+        if isinstance(model_input, (bytes, bytearray)):
+            input_info = provenance.store_input_image(bytes(model_input), meta.get("filename"))
+        else:
+            input_info = {"kind": getattr(model_input, "kind", "artifact"), "path": str(getattr(model_input, "path", ""))}
+        try:
+            manifest = generator_registry.get_manifest(model_id)
+        except Exception:  # noqa: BLE001
+            manifest = {}
+        provenance.record_generation(
+            output_path,
+            model_id=model_id,
+            manifest=manifest,
+            params=params,
+            deterministic=bool(meta.get("deterministic", "seed" in params)),
+            input_info=input_info,
+            collection=collection,
+            started_at=started_at,
+            priority=getattr(job, "priority", None),
+            regenerated_from=meta.get("regenerated_from"),
+        )
+    except Exception:  # noqa: BLE001 — provenance must never fail a generation
+        pass

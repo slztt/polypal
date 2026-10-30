@@ -11,7 +11,8 @@ from pathlib import Path
 from urllib.parse import quote
 from pydantic import BaseModel, Field
 
-from services import imported_sources
+from services import imported_sources, provenance
+from services.mesh_io import flatten_scene
 # Import the module (not the name) so WORKSPACE_DIR is read at call time: the
 # settings endpoint rebinds it when the user moves the workspace.
 import services.generator_registry as registry
@@ -45,6 +46,14 @@ class MeshOpRequest(BaseModel):
 class TransformRequest(BaseModel):
     path: str                    # format: "{collection}/{filename}"
     matrix: list[list[float]]    # row-major 4x4 world transform
+
+
+def _flatten_or_422(loaded):
+    """One flat mesh with scene-graph transforms baked in (gizmo edits survive)."""
+    try:
+        return flatten_scene(loaded, trimesh)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 def _resolve_input_path(raw_path: str) -> Path:
@@ -120,12 +129,28 @@ def list_mesh_operations():
     return mesh_ops_registry.describe()
 
 
+def _record(output_path: Path, input_path: Path, op_id: str, params: dict, details) -> None:
+    """Best-effort provenance: an edit's lineage back to its source mesh."""
+    try:
+        try:
+            label = mesh_ops_registry.get(op_id).label
+        except MeshOpNotFoundError:
+            label = op_id
+        provenance.record_edit(
+            output_path, input_path,
+            steps=[{"op": op_id, "label": label, "params": dict(params), "details": dict(details or {})}],
+            source="toolbar",
+        )
+    except Exception:  # noqa: BLE001 — provenance must never fail an edit
+        pass
+
+
 @router.post("/op/{op_name}")
 def run_mesh_operation(op_name: str, body: MeshOpRequest):
     input_path = _resolve_input_path(body.path)
-    return _operation_response(
-        _run_operation(op_name, input_path, body.params)
-    )
+    result = _run_operation(op_name, input_path, body.params)
+    _record(result.file_path, input_path, op_name, body.params, result.details)
+    return _operation_response(result)
 
 
 @router.post("/mesh")
@@ -136,14 +161,14 @@ def optimize_mesh(body: OptimizeRequest):
         input_path,
         f"{input_path.stem}_opt{target_faces}.glb",
     )
-    response = _operation_response(
-        _run_operation(
-            "decimate",
-            input_path,
-            {"target_faces": target_faces},
-            output_path,
-        )
+    result = _run_operation(
+        "decimate",
+        input_path,
+        {"target_faces": target_faces},
+        output_path,
     )
+    _record(result.file_path, input_path, "decimate", {"target_faces": target_faces}, result.details)
+    response = _operation_response(result)
     return {
         "url": response.get("url"),
         "face_count": response.get("face_count", 0),
@@ -158,15 +183,16 @@ def smooth_mesh(body: SmoothRequest):
         input_path,
         f"{input_path.stem}_smooth{iterations}.glb",
     )
-    response = _operation_response(
-        _run_operation(
-            "smooth",
-            input_path,
-            {"iterations": iterations, "lambda_": 0.5, "mode": "laplacian"},
-            output_path,
-            preserve_visuals=True,
-        )
+    smooth_params = {"iterations": iterations, "lambda_": 0.5, "mode": "laplacian"}
+    result = _run_operation(
+        "smooth",
+        input_path,
+        smooth_params,
+        output_path,
+        preserve_visuals=True,
     )
+    _record(result.file_path, input_path, "smooth", smooth_params, result.details)
+    response = _operation_response(result)
     return {"url": response.get("url")}
 
 
@@ -194,6 +220,11 @@ def transform_mesh(body: TransformRequest):
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / output_name
     loaded.export(str(output_path))
+    provenance.record_edit(
+        output_path, input_path,
+        steps=[{"op": "transform", "label": "Gizmo transform", "params": {"matrix": body.matrix}, "details": {}}],
+        source="gizmo",
+    )
 
     rel = output_path.resolve().relative_to(workspace).as_posix()
     return {"url": f"/workspace/{rel}"}
@@ -404,10 +435,18 @@ def ply_to_splat(path: str):
     return FileResponse(str(out), media_type="application/octet-stream")
 
 
+EXPORT_UNIT_SCALE = {"m": 1.0, "cm": 100.0, "mm": 1000.0, "in": 1 / 0.0254}
+
+
 @router.get("/export")
-def export_mesh(path: str, format: str):
+def export_mesh(path: str, format: str, units: str = "m"):
+    """Export as OBJ/STL/PLY. ``units`` rescales from scene metres: STL/OBJ are
+    unitless and slicers read them as millimetres, so a model with a real-world
+    size should be exported with ``units=mm``."""
     if format not in ("obj", "stl", "ply"):
         raise HTTPException(400, "Supported formats: obj, stl, ply")
+    if units not in EXPORT_UNIT_SCALE:
+        raise HTTPException(400, f"units must be one of {', '.join(EXPORT_UNIT_SCALE)}")
 
     input_path = (registry.WORKSPACE_DIR / path).resolve()
     if not registry.is_within_workspace(input_path):
@@ -415,12 +454,9 @@ def export_mesh(path: str, format: str):
     if not input_path.exists():
         raise HTTPException(404, f"File not found: {path}")
 
-    loaded = trimesh.load(str(input_path))
-    if isinstance(loaded, trimesh.Scene):
-        geoms = list(loaded.geometry.values())
-        mesh = trimesh.util.concatenate(geoms) if len(geoms) > 1 else geoms[0]
-    else:
-        mesh = loaded
+    mesh = _flatten_or_422(trimesh.load(str(input_path)))
+    if EXPORT_UNIT_SCALE[units] != 1.0:
+        mesh.apply_scale(EXPORT_UNIT_SCALE[units])
 
     data = mesh.export(file_type=format)
     stem = input_path.stem
