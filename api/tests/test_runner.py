@@ -28,7 +28,7 @@ class RunnerTests(unittest.TestCase):
             scene.mkdir(parents=True)
             manifest = scene / "scene-manifest.json"
             manifest.write_text(json.dumps({
-                "schema": "polypal.scene-manifest.v1", "sceneRoot": ".", "assets": [],
+                "schema": "modly.scene-manifest.v1", "sceneRoot": ".", "assets": [],
             }))
             with patch.object(runner, "WORKSPACE_DIR", workspace):
                 typed = runner.decode_model_input({"input": {"kind": "scene", "path": str(manifest)}})

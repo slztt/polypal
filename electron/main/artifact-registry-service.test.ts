@@ -67,7 +67,7 @@ test('lists Workflows and Exports assets while skipping hidden, cache, and inter
 test('registers a generated scene directory through its canonical manifest artifact', () => withWorkspace(async (workspaceDir) => {
   await mkdir(path.join(workspaceDir, 'Workflows/world'), { recursive: true })
   await writeFile(path.join(workspaceDir, 'Workflows/world/scene-manifest.json'), JSON.stringify({
-    schema: 'polypal.scene-manifest.v1', sceneRoot: '.', assets: [],
+    schema: 'modly.scene-manifest.v1', sceneRoot: '.', assets: [],
   }))
   const result = await listWorkspaceAssetLibrary({ workspaceDir })
   assert.equal(result.success, true)

@@ -4,11 +4,12 @@
 
 # PolyPal
 
-**Local, open source, AI-powered image-to-3D mesh generation.**
-Turn any photo into a 3D model using open source AI models running entirely on your GPU.
+**Local, open source, AI-powered 3D generation — and everything after it.**
+Turn any photo into a 3D model with open source AI models running entirely on your GPU, then
+clean it up, size it for the real world and check every change, by hand or by asking in plain English.
 PolyPal is a desktop application for Windows, Linux, and Apple Silicon macOS.
 
-> Created by [Lightning Pixel](https://github.com/lightningpixel)
+> PolyPal is based on [Modly](https://github.com/lightningpixel/modly) by [Lightning Pixel](https://github.com/lightningpixel).
 
 <p align="center">
   <img src="docs/app-screenshot.png" alt="PolyPal screenshot" />
@@ -16,6 +17,21 @@ PolyPal is a desktop application for Windows, Linux, and Apple Silicon macOS.
 
 ---
 
+## What's new in 0.5
+
+| | |
+|---|---|
+| **AI mesh editing** | Type *"remove the floaters, reduce to 20k triangles and make it 15 cm tall"* — PolyPal plans the steps, lets you review and tweak them, then applies them atomically as a new, undoable version. Works offline with a built-in planner, or with your copilot model. |
+| **Smarter copilot** | Streaming answers with live tool cards, a stop button, approval cards for heavy actions, strict argument validation, and conversations that persist across sessions. |
+| **Extensible editor** | A Mesh Editor panel (`E`) with stats, real-world sizing, every operation as a form, version history — and a plugin contract so extensions add their own tools ([guide](docs/editor-plugins.md)). |
+| **Visual diagnostics** | Contact shadows, a deviation heatmap against the previous version or the original, and a before/after wipe. |
+| **Generation provenance** | Every model remembers its model, version, exact settings, seed and input image — regenerate it identically, or as a variation, in one click. |
+| **GPU management** | A VRAM verdict before you launch, automatic unloading of idle or conflicting models, and a priority queue you can reorder. |
+| **Real-world scale** | Set a true size in mm/cm/m/in/ft, read live dimensions, measure between two points, and export STL in millimetres for slicers. |
+
+See [ROADMAP.md](ROADMAP.md) for the full list and [ARCHITECTURE.md](ARCHITECTURE.md) for how it fits together.
+
+---
 
 ## Download
 
@@ -77,7 +93,9 @@ npm run build
 - The top bar includes a live RAM indicator sourced from the main process.
 - Workflow wiring is validated before run; invalid graphs stay in place and surface inline/toast warnings instead of dropping the current mesh view.
 - Package Apple Silicon macOS with `npm run package:mac`.
-- Imported meshes can be smoothed and decimated in-app; optimized results are written back into the workspace.
+- Imported meshes can be edited in-app; results are written back into the workspace as new versions.
+- VRAM is measured on NVIDIA GPUs (via `nvidia-smi`). Elsewhere PolyPal still uses each model's declared requirements but cannot measure free memory.
+- Extensions written for Modly work unchanged: PolyPal reads the same extension registry and also exports the `MODLY_*` environment variables those extensions expect.
 
 ---
 
@@ -85,7 +103,9 @@ npm run build
 
 PolyPal supports external model and process extensions. Each extension is a GitHub repository containing a `manifest.json` plus the runtime entry files required by its type.
 
-### Official extensions
+### Compatible extensions
+
+The Modly project's official extensions install and run in PolyPal unchanged:
 
 | Extension | Model | URL |
 |-----------|-------|-----|
@@ -97,17 +117,11 @@ PolyPal supports external model and process extensions. Each extension is a GitH
 
 ### How to install an extension
 
-**1.** Go to the **Models** page and click **Install from GitHub**.
-
-![Install from GitHub](docs/install-from-github.png)
+**1.** Go to the **Extensions** page and click **Install from GitHub**.
 
 **2.** Enter the HTTPS URL of the extension repository and confirm.
 
-![Enter extension URL](docs/install-extension.png)
-
 **3.** If the extension exposes model nodes, download the model or one of its variants. Process extensions are ready once installation and setup complete.
-
-![Install models](docs/install-models.png)
 
 ### Multiple Hugging Face repositories per model node
 
@@ -281,7 +295,7 @@ Start with a basic workflow first. For example, on the "Workflows" tab, try: Ima
 
 Model extensions may also declare `scene` as a node input or output. A scene is
 a workspace directory containing `scene-manifest.json` with schema
-`polypal.scene-manifest.v1`; it is not an arbitrary JSON file. Use the **Load
+`modly.scene-manifest.v1`; it is not an arbitrary JSON file. Use the **Load
 Scene** workflow node to select and validate an existing scene directory.
 Scene-capable generators implement `generate_artifact(input_kind,
 artifact_path, ...)`; legacy image generators and `POST /generate/from-image`
@@ -291,6 +305,22 @@ For this first contract, `scene` is model-only and must be declared as the singl
 `input` value (not inside `inputs`); process and mixed-input scene nodes are rejected.
 Model nodes may still accept multiple images and produce a scene.
 
+
+## Mesh editing, provenance and the copilot API
+
+The backend exposes the new capabilities to scripts and agents (FastAPI docs at `http://127.0.0.1:8765/docs` while the app runs):
+
+| Route | Purpose |
+|-------|---------|
+| `GET /edit/ops` · `GET /edit/stats?path=` | Operation catalogue; mesh statistics |
+| `POST /edit/plan` · `POST /edit/apply` | Plain English → validated steps; atomic apply |
+| `GET /edit/provenance?path=` · `POST /generate/regenerate` | Lineage; replay a generation |
+| `GET /generate/queue` · `POST /generate/queue/{id}/priority` | Queue inspection and reordering |
+| `GET /gpu/status` · `POST /gpu/estimate` · `POST /gpu/policy` | VRAM, launch verdicts, unloading policy |
+| `POST /agent/chat/stream` · `/agent/conversations` | Streaming copilot; saved chats |
+
+The bundled MCP server (`api/mcp_server.py`) offers the same as `polypal_edit_mesh`,
+`polypal_mesh_stats`, `polypal_get_provenance`, `polypal_regenerate` and `polypal_gpu_status`.
 
 ## PolyPal CLI
 
@@ -313,17 +343,11 @@ See `tools/polypal-cli/SKILL.md` for the agent workflow and output contract.
 
 ---
 
-### Community
+## Acknowledgements
 
-Join the [Discord server](https://discord.gg/BvjDCvS3yr) to stay up to date with the latest news, report bugs, and share feedback.
-
----
-
-## Sponsors
-
-<p align="center">
-  Thanks to our early sponsors for believing in PolyPal and helping make local AI 3D generation more accessible.
-</p>
+PolyPal is built on [Modly](https://github.com/lightningpixel/modly) by
+[Lightning Pixel](https://github.com/lightningpixel) and its contributors. The official extensions
+listed above are maintained by the Modly project. Modly's early sponsors:
 
 <p align="center">
   <kbd>
@@ -353,6 +377,8 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 **If you fork this project and build your own app from it, you must credit the original project and its creator:**
 
-> Based on [PolyPal](https://github.com/slztt/polypal) by [Lightning Pixel](https://github.com/lightningpixel)
+PolyPal itself carries the credit required by Modly's license (in this README and on the app's About page):
 
-This is a requirement of the MIT license attribution clause. Please keep this credit visible in your app's UI or documentation.
+> Based on [Modly](https://github.com/lightningpixel/modly) by [Lightning Pixel](https://github.com/lightningpixel)
+
+If you build your own app from PolyPal, keep that credit visible in your app's UI or documentation, as the license requires.

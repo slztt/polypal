@@ -5,7 +5,9 @@ import re
 import stat
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
-SCHEMA = "polypal.scene-manifest.v1"
+# Wire-format id shared with scene-producing extensions written for Modly
+# (which PolyPal is based on). Do not rename: existing scene files use it.
+SCHEMA = "modly.scene-manifest.v1"
 MANIFEST = "scene-manifest.json"
 MAX_MANIFEST_BYTES = 1024 * 1024
 MAX_REFERENCES = 4096

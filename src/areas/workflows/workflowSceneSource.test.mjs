@@ -13,7 +13,7 @@ const {
   invalidateValidatedScenePath,
   resolveSceneSourceManifest,
 } = createRequire(import.meta.url)(outfile)
-const encoded = Buffer.from(JSON.stringify({ schema: 'polypal.scene-manifest.v1', sceneRoot: '.', assets: [] })).toString('base64')
+const encoded = Buffer.from(JSON.stringify({ schema: 'modly.scene-manifest.v1', sceneRoot: '.', assets: [] })).toString('base64')
 
 test('Load Scene resolves directory and manifest without image bytes', async () => {
   for (const scenePath of ['Workflows/room', 'Workflows/room/scene-manifest.json']) {

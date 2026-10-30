@@ -12,7 +12,8 @@ export interface SceneArtifactManifestInitialView {
   up?: [number, number, number]
 }
 export interface SceneArtifactManifestV1 {
-  schema: 'polypal.scene-manifest.v1'
+  /** Wire-format id inherited from Modly; extensions write it, so it is not renamed. */
+  schema: 'modly.scene-manifest.v1'
   sceneRoot: string
   assets: unknown[]
   preview?: SceneArtifactManifestPreview

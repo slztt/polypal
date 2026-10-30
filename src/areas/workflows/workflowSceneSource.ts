@@ -154,8 +154,8 @@ function validateSceneManifest(manifest: unknown): { ok: true; manifest: SceneAr
   if (!isPlainObject(manifest)) {
     return { ok: false, error: 'Scene manifest must be a JSON object.' }
   }
-  if (manifest.schema !== 'polypal.scene-manifest.v1') {
-    return { ok: false, error: 'Scene manifest schema must be polypal.scene-manifest.v1.' }
+  if (manifest.schema !== 'modly.scene-manifest.v1') {
+    return { ok: false, error: 'Scene manifest schema must be modly.scene-manifest.v1.' }
   }
 
   const rawSceneRoot = manifest.sceneRoot
@@ -191,7 +191,7 @@ function validateSceneManifest(manifest: unknown): { ok: true; manifest: SceneAr
     sceneRoot,
     manifest: {
       ...metadata,
-      schema: 'polypal.scene-manifest.v1',
+      schema: 'modly.scene-manifest.v1',
       sceneRoot: rawSceneRoot,
       assets: manifest.assets,
       ...(preview !== undefined ? { preview } : {}),

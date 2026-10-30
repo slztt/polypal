@@ -1,0 +1,10 @@
+{
+  "name": "polypal-flatten-base",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Example PolyPal Mesh Editor plugin",
+  "dependencies": {
+    "@gltf-transform/core": "^3.10.1",
+    "@gltf-transform/functions": "^3.10.1"
+  }
+}
