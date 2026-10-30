@@ -107,6 +107,8 @@ def _run_operation(
         raise HTTPException(503, str(exc)) from exc
     except (TypeError, ValueError) as exc:
         raise HTTPException(400, str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001 — e.g. PyMeshLabException; keep the error readable
+        raise HTTPException(500, f"{operation_id} failed: {exc}") from exc
 
 
 def _operation_response(result: MeshOpResult) -> dict[str, object]:

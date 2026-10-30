@@ -293,7 +293,8 @@ function SceneMeshModel({
     scene.position.set(0, 0, 0)
     scene.rotation.set(0, 0, 0)
     scene.scale.set(1, 1, 1)
-    const box = new THREE.Box3().setFromObject(scene)
+    // precise: a rotated node's loose AABB overstates the size (and the centring).
+    const box = new THREE.Box3().setFromObject(scene, true)
     const center = new THREE.Vector3()
     box.getCenter(center)
     const size = new THREE.Vector3()
@@ -950,24 +951,41 @@ function referenceUrl(url: string): string {
   return `${url}${url.includes('?') ? '&' : '?'}polypalRef=1`
 }
 
-function ReferenceScene({ scene, clipPlane, visible, onObject }: {
-  scene: THREE.Group | THREE.Scene
+interface ReferenceProps {
+  url: string
   clipPlane: THREE.Plane | null
   visible: boolean
-  onObject: (obj: THREE.Object3D | null) => void
+  onObject: (o: THREE.Object3D | null) => void
+  /** Current model's size; a very different reference is shown scaled to match. */
+  matchSpan?: number
+  onDisplayScale?: (factor: number) => void
+}
+
+function ReferenceScene({ scene, clipPlane, visible, onObject, matchSpan, onDisplayScale }: Omit<ReferenceProps, 'url'> & {
+  scene: THREE.Group | THREE.Scene
 }): JSX.Element {
   useEffect(() => {
     // Same placement rule as the main model: centred on X/Z, resting on Y = 0.
     scene.position.set(0, 0, 0)
     scene.rotation.set(0, 0, 0)
     scene.scale.set(1, 1, 1)
-    const box = new THREE.Box3().setFromObject(scene)
+    // precise: a rotated node's loose AABB overstates the size (and the centring).
+    const box = new THREE.Box3().setFromObject(scene, true)
+    const size = box.getSize(new THREE.Vector3())
+    const span = Math.max(size.x, size.y, size.z)
+    // A rescale edit makes the versions incomparable side by side; show the
+    // reference at the current size instead (deviation uses file coordinates
+    // relative to this root, so it is unaffected).
+    const ratio = matchSpan && span > 0 ? matchSpan / span : 1
+    const factor = ratio < 0.67 || ratio > 1.5 ? ratio : 1
+    scene.scale.setScalar(factor)
     const center = new THREE.Vector3()
     box.getCenter(center)
-    scene.position.set(-center.x, -box.min.y, -center.z)
+    scene.position.set(-center.x * factor, -box.min.y * factor, -center.z * factor)
+    onDisplayScale?.(factor)
     onObject(scene)
     return () => onObject(null)
-  }, [scene, onObject])
+  }, [scene, onObject, matchSpan, onDisplayScale])
 
   useEffect(() => {
     scene.traverse((child) => {
@@ -984,23 +1002,58 @@ function ReferenceScene({ scene, clipPlane, visible, onObject }: {
   return <primitive object={scene} visible={visible} raycast={() => null} />
 }
 
-function GltfReference(props: { url: string; clipPlane: THREE.Plane | null; visible: boolean; onObject: (o: THREE.Object3D | null) => void }): JSX.Element {
+function GltfReference(props: ReferenceProps): JSX.Element {
   const key = referenceUrl(props.url)
   const { scene } = useGLTF(key)
   useEffect(() => () => useGLTF.clear(key), [key])
   return <ReferenceScene scene={scene} {...props} />
 }
 
-function ObjReference(props: { url: string; clipPlane: THREE.Plane | null; visible: boolean; onObject: (o: THREE.Object3D | null) => void }): JSX.Element {
+function ObjReference(props: ReferenceProps): JSX.Element {
   const key = referenceUrl(props.url)
   const scene = useLoader(OBJLoader, key)
   useEffect(() => () => useLoader.clear(OBJLoader, key), [key])
   return <ReferenceScene scene={scene} {...props} />
 }
 
-function ReferenceModel(props: { url: string; clipPlane: THREE.Plane | null; visible: boolean; onObject: (o: THREE.Object3D | null) => void }): JSX.Element {
+function ReferenceModel(props: ReferenceProps): JSX.Element {
   const extension = props.url.split('?')[0]?.split('.').pop()?.toLowerCase()
   return extension === 'obj' ? <ObjReference {...props} /> : <GltfReference {...props} />
+}
+
+/** Grid extent that suits a model: one decade above ~4× its size (min 10 cm). */
+export function gridSizeFor(span: number): number {
+  if (!Number.isFinite(span) || span <= 0) return 10
+  return Math.min(1000, Math.max(0.1, 10 ** Math.ceil(Math.log10(span * 4))))
+}
+
+/**
+ * Frames the camera on the model when it first appears or when its size
+ * changes a lot (e.g. after setting a real-world size), but leaves the user's
+ * view alone for edits that keep the scale.
+ */
+function CameraFit({ jobId, extents }: { jobId: string | null; extents?: [number, number, number] }): null {
+  const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera
+  const controls = useThree((s) => s.controls) as unknown as { target: THREE.Vector3; update: () => void } | null
+  const last = useRef<{ jobId: string | null; radius: number } | null>(null)
+  useEffect(() => {
+    if (!extents || !controls) return
+    const [w, h, d] = extents
+    const radius = Math.max(0.5 * Math.hypot(w, h, d), 1e-4)
+    const previous = last.current
+    const sameJob = previous?.jobId === jobId
+    if (previous && sameJob && radius / previous.radius < 2 && radius / previous.radius > 0.5) return
+    last.current = { jobId, radius }
+    const distance = (radius / Math.sin((camera.fov * Math.PI) / 360)) * 1.15
+    const target = new THREE.Vector3(0, h / 2, 0)
+    camera.position.copy(target).addScaledVector(new THREE.Vector3(0, 0.35, 1).normalize(), distance)
+    camera.near = Math.max(distance / 1000, 1e-4)
+    camera.far = Math.max(distance * 200, 100)
+    camera.updateProjectionMatrix()
+    controls.target.copy(target)
+    controls.update()
+  }, [camera, controls, jobId, extents])
+  return null
 }
 
 /**
@@ -1117,6 +1170,7 @@ export default function Viewer3D({
   const [compareAgainst, setCompareAgainst] = useState<'previous' | 'original'>('previous')
   const [wipe, setWipe] = useState(0.5)
   const [referenceObject, setReferenceObject] = useState<THREE.Object3D | null>(null)
+  const [referenceScale, setReferenceScale] = useState(1)
   const [deviation, setDeviation] = useState<DeviationResult | null>(null)
   const [deviationBusy, setDeviationBusy] = useState(false)
   const [measureActive, setMeasureActive] = useState(false)
@@ -1213,6 +1267,7 @@ export default function Viewer3D({
   }, [measurePoints, meshObject])
 
   const modelSpan = Math.max(...(meshStats?.extents ?? [1, 1, 1]), 1e-3)
+  const gridSize = gridSizeFor(modelSpan)
 
   function onWipePointer(e: React.PointerEvent) {
     const rect = viewerRef.current?.getBoundingClientRect()
@@ -1363,7 +1418,8 @@ export default function Viewer3D({
             <Lightformer intensity={0.3 * (lightSettings.envIntensity ?? DEFAULT_LIGHT_SETTINGS.envIntensity)} position={[4, 1, -4]} scale={6} />
           </Environment>
 
-          <gridHelper args={[10, 20, '#3f3f46', '#27272a']} />
+          <gridHelper key={gridSize} args={[gridSize, 20, '#3f3f46', '#27272a']} />
+          <CameraFit jobId={currentJob?.id ?? null} extents={meshStats?.extents} />
 
           {contactShadows && modelUrl && meshStats && (
             <ContactShadows
@@ -1403,6 +1459,8 @@ export default function Viewer3D({
                     clipPlane={compareActive ? beforePlane : null}
                     visible={compareActive}
                     onObject={setReferenceObject}
+                    matchSpan={meshStats?.extents ? modelSpan : undefined}
+                    onDisplayScale={setReferenceScale}
                   />
                 </Suspense>
               )}
@@ -1452,8 +1510,8 @@ export default function Viewer3D({
             enablePan
             enableZoom
             enableRotate
-            minDistance={0.5}
-            maxDistance={20}
+            minDistance={modelSpan * 0.05}
+            maxDistance={Math.max(20, modelSpan * 50)}
             autoRotate={autoRotate}
             autoRotateSpeed={1.5}
             enableDamping
@@ -1522,6 +1580,12 @@ export default function Viewer3D({
                 <option value="original">Original</option>
               </select>
               <span className="px-2 py-0.5 rounded bg-zinc-900/80 text-[10px] text-accent-light">After</span>
+              {referenceScale !== 1 && (
+                <span className="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-[10px] text-amber-300"
+                  title="The versions differ greatly in size, so the earlier one is shown scaled to match.">
+                  Before shown ×{formatNumber(referenceScale)}
+                </span>
+              )}
             </div>
           </div>
         )}

@@ -257,7 +257,13 @@ def apply_steps(input_path: Path, steps: list[dict[str, Any]], instruction: Opti
                 output_path=scratch / f"step{index:02d}.glb",
                 preserve_visuals=True,
             )
-            result = mesh_ops_registry.run(step["op"], current, step["params"], context)
+            try:
+                result = mesh_ops_registry.run(step["op"], current, step["params"], context)
+            except (MeshOpNotFoundError, MeshOpUnavailableError, MeshOpExecutionError,
+                    TypeError, ValueError, FileNotFoundError):
+                raise
+            except Exception as exc:  # noqa: BLE001 — backend libraries raise their own types
+                raise MeshOpExecutionError(f"{step['label']} failed: {exc}") from exc
             current = Path(result.file_path)
             results.append({**step, "details": dict(result.details)})
 

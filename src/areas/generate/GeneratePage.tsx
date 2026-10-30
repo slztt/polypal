@@ -960,7 +960,7 @@ export default function GeneratePage(): JSX.Element {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header bar */}
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-zinc-800 bg-surface-400 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-zinc-800 bg-surface-400 shrink-0 whitespace-nowrap">
 
           {/* Free memory */}
           <button

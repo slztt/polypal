@@ -33,7 +33,9 @@ async def lifespan(app: FastAPI):
 
 class _StatusFilter(logging.Filter):
     def filter(self, record):
-        return "/generate/status/" not in record.getMessage()
+        # Endpoints the UI polls every few seconds would drown the log.
+        message = record.getMessage()
+        return not any(path in message for path in ("/generate/status/", "/generate/queue", "/gpu/status"))
 
 logging.getLogger("uvicorn.access").addFilter(_StatusFilter())
 
