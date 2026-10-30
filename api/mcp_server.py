@@ -143,6 +143,57 @@ async def list_tools() -> list[Tool]:
             description="Get the current PolyPal settings (models directory, workspace directory).",
             inputSchema={"type": "object", "properties": {}},
         ),
+        Tool(
+            name="polypal_mesh_stats",
+            description="Measure a workspace mesh: triangles, size in metres, pieces, holes, watertightness.",
+            inputSchema={
+                "type": "object",
+                "properties": {"path": {"type": "string", "description": "Workspace-relative mesh path."}},
+                "required": ["path"],
+            },
+        ),
+        Tool(
+            name="polypal_edit_mesh",
+            description=(
+                "Edit a workspace mesh from a plain-English instruction (e.g. 'remove floaters, "
+                "reduce to 20k triangles and make it 15 cm tall'). Writes a new mesh version."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Workspace-relative mesh path."},
+                    "instruction": {"type": "string", "description": "What to change."},
+                },
+                "required": ["path", "instruction"],
+            },
+        ),
+        Tool(
+            name="polypal_get_provenance",
+            description="How a workspace mesh was generated and edited (model, settings, seed, edit history).",
+            inputSchema={
+                "type": "object",
+                "properties": {"path": {"type": "string", "description": "Workspace-relative mesh path."}},
+                "required": ["path"],
+            },
+        ),
+        Tool(
+            name="polypal_regenerate",
+            description="Re-run the generation a mesh came from with exactly the same settings. Returns a job_id.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Workspace-relative mesh path."},
+                    "new_seed": {"type": "boolean", "description": "Use a new random seed."},
+                    "priority": {"type": "string", "enum": ["high", "normal", "low"]},
+                },
+                "required": ["path"],
+            },
+        ),
+        Tool(
+            name="polypal_gpu_status",
+            description="GPU memory usage, loaded models and the generation queue.",
+            inputSchema={"type": "object", "properties": {}},
+        ),
     ]
 
 
@@ -251,6 +302,58 @@ async def _dispatch(client: httpx.AsyncClient, name: str, args: dict) -> str:
         r.raise_for_status()
         data = r.json()
         return f"Models directory: {data.get('models_dir')}\nWorkspace directory: {data.get('workspace_dir')}"
+
+    elif name == "polypal_mesh_stats":
+        r = await client.get(f"{API_BASE}/edit/stats", params={"path": args["path"]})
+        r.raise_for_status()
+        s = r.json()
+        w, h, d = s.get("extents") or [0, 0, 0]
+        return (
+            f"{s['faces']:,} triangles, {s['vertices']:,} vertices | size {w:.4g} × {h:.4g} × {d:.4g} m"
+            f"{' (real-world)' if s.get('units') == 'm' else ' (unitless)'} | {s['components']} piece(s) | "
+            + ("watertight" if s.get("watertight") else f"{s['boundary_edges']} boundary edges")
+        )
+
+    elif name == "polypal_edit_mesh":
+        r = await client.post(f"{API_BASE}/edit/plan", json={"instruction": args["instruction"], "path": args["path"], "mode": "rules"})
+        r.raise_for_status()
+        plan = r.json()
+        if not plan.get("steps"):
+            return plan.get("summary") or "No matching mesh operations."
+        r = await client.post(
+            f"{API_BASE}/edit/apply",
+            json={"path": args["path"], "steps": plan["steps"], "instruction": args["instruction"], "source": "mcp"},
+            timeout=600.0,
+        )
+        r.raise_for_status()
+        data = r.json()
+        return f"{data.get('summary')} New file: {data.get('url', data.get('path'))}"
+
+    elif name == "polypal_get_provenance":
+        r = await client.get(f"{API_BASE}/edit/provenance", params={"path": args["path"]})
+        r.raise_for_status()
+        import json as _json
+        return _json.dumps(r.json().get("lineage") or [], indent=2)[:8000] or "No history recorded."
+
+    elif name == "polypal_regenerate":
+        r = await client.post(f"{API_BASE}/generate/regenerate", json={
+            "path": args["path"], "new_seed": bool(args.get("new_seed")), "priority": args.get("priority", "normal"),
+        })
+        r.raise_for_status()
+        data = r.json()
+        return f"Regeneration queued. Job ID: {data['job_id']} (seed {data.get('seed')})"
+
+    elif name == "polypal_gpu_status":
+        status = (await client.get(f"{API_BASE}/gpu/status")).json()
+        queue = (await client.get(f"{API_BASE}/generate/queue")).json()
+        gpus = status.get("gpus") or []
+        head = (
+            f"{gpus[0]['name']}: {gpus[0]['free_mb']} MB free of {gpus[0]['total_mb']} MB"
+            if gpus else "VRAM not measurable on this system"
+        )
+        loaded = ", ".join(r["id"] for r in status.get("resident") or []) or "none"
+        waiting = ", ".join(f"{q['job_id']} ({q['priority']})" for q in queue.get("queued") or []) or "empty"
+        return f"{head} | loaded: {loaded} | running: {queue.get('running') or 'nothing'} | queue: {waiting}"
 
     else:
         return f"Unknown tool: {name}"
