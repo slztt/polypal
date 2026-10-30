@@ -73,9 +73,13 @@ class ExtensionProcess:
         env["EXTENSION_DIR"] = str(self.ext_dir)
         env["MODELS_DIR"]    = str(MODELS_DIR)
         env["WORKSPACE_DIR"] = str(WORKSPACE_DIR)
-        env["MODLY_API_DIR"] = str(Path(__file__).parent.parent)
-        # Lets extensions call back into the Modly API (e.g. /llm/chat for the shared LLM).
-        env.setdefault("MODLY_API_URL", "http://127.0.0.1:8765")
+        env["POLYPAL_API_DIR"] = str(Path(__file__).parent.parent)
+        # Lets extensions call back into the PolyPal API (e.g. /llm/chat for the shared LLM).
+        env.setdefault("POLYPAL_API_URL", "http://127.0.0.1:8765")
+        # Extensions written for Modly (which PolyPal is based on) read the
+        # same values under their original MODLY_* names.
+        env["MODLY_API_DIR"] = env["POLYPAL_API_DIR"]
+        env.setdefault("MODLY_API_URL", env["POLYPAL_API_URL"])
         # Force the worker's Python stdio to UTF-8 so it matches the UTF-8
         # pipe readers below regardless of the OS locale (cp1252/cp932).
         env["PYTHONUTF8"] = "1"
@@ -231,7 +235,7 @@ class ExtensionProcess:
         the HUD's log pane went dark during multi-minute volume decode.
 
         No per-line extension-id prefix: the HUD log pane is a single
-        truncated line, and eating 20 characters with "[modly-hy3d2-mac] "
+        truncated line, and eating 20 characters with "[polypal-hy3d2-mac] "
         hides the tail of the tqdm bar the user actually wants to read.
         """
         stream = proc.stderr

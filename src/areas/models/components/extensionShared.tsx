@@ -99,13 +99,13 @@ export function IOBadge({ node }: { node: ExtensionNode }): JSX.Element {
 const LED_TONES = {
   green:  'bg-emerald-400 shadow-[0_0_0_3px_rgba(52,211,153,0.12)]',
   amber:  'bg-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.12)]',
-  violet: 'bg-accent-light shadow-[0_0_0_3px_rgba(139,92,246,0.16)] animate-pulse',
+  accent: 'bg-accent-light shadow-[0_0_0_3px_rgba(34,197,94,0.16)] animate-pulse',
 } as const
 
 const TEXT_TONES = {
   green:  'text-emerald-400',
   amber:  'text-amber-400',
-  violet: 'text-accent-light',
+  accent: 'text-accent-light',
 } as const
 
 export function StatusBadge({ tone, children }: { tone: keyof typeof LED_TONES; children: React.ReactNode }): JSX.Element {

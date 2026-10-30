@@ -4,7 +4,7 @@
  * Deliberately free of electron imports: the parsing and resolution helpers are
  * pure and get unit-tested by bundling this file directly (gpu-detect.test.mjs).
  *
- * Modly never installs PyTorch itself — each extension's setup.py does, from an
+ * PolyPal never installs PyTorch itself — each extension's setup.py does, from an
  * index it picks on its own. What we produce here is the information that lets
  * that choice land on the right wheels: the accelerator, and for AMD the ROCm
  * compute target plus the pip index/requirements the setup must end up using.
@@ -40,7 +40,7 @@ const ROCM_LINUX_INDEX   = 'https://download.pytorch.org/whl/rocm7.2'
 const ROCM_WINDOWS_INDEX = 'https://repo.amd.com/rocm/whl-multi-arch/'
 
 // Pinned because AMD's index carries several ROCm builds side by side; this is
-// the newest pair published for cp311 (Modly's embedded Python) on Windows.
+// the newest pair published for cp311 (PolyPal's embedded Python) on Windows.
 const ROCM_WINDOWS_TORCH       = '2.11.0+rocm7.14.0'
 const ROCM_WINDOWS_TORCHVISION = '0.26.0+rocm7.14.0'
 
@@ -202,17 +202,22 @@ export function resolveWindowsGfxTarget(
 
 /**
  * The pip index and requirements an extension's torch install has to end up
- * using on this platform. `MODLY_ROCM_INDEX` and `MODLY_ROCM_TORCH_SPEC`
+ * using on this platform. `POLYPAL_ROCM_INDEX` and `POLYPAL_ROCM_TORCH_SPEC`
  * (space-separated requirements) override either half — the escape hatch when a
  * newer torch breaks an extension and you need to drop back to, say, rocm6.4.
  */
+/** Read a POLYPAL_* override, falling back to its legacy MODLY_* spelling. */
+export function readEnvOverride(env: NodeJS.ProcessEnv, name: string): string | undefined {
+  return (env[`POLYPAL_${name}`] ?? env[`MODLY_${name}`])?.trim() || undefined
+}
+
 export function resolveRocmTorchSpec(
   platform: string,
   gfxTarget: string | null,
   env: NodeJS.ProcessEnv = process.env,
 ): { indexUrl: string; specs: string[] } {
-  const indexOverride = env['MODLY_ROCM_INDEX']?.trim()
-  const specOverride  = env['MODLY_ROCM_TORCH_SPEC']?.trim()
+  const indexOverride = readEnvOverride(env, 'ROCM_INDEX')
+  const specOverride  = readEnvOverride(env, 'ROCM_TORCH_SPEC')
 
   const isWindows = platform === 'win32'
   const indexUrl  = indexOverride || (isWindows ? ROCM_WINDOWS_INDEX : ROCM_LINUX_INDEX)
@@ -278,7 +283,7 @@ function rocmInfo(
 }
 
 function readFlavorOverride(env: NodeJS.ProcessEnv): TorchFlavor | null {
-  const raw = env['MODLY_TORCH_FLAVOR']?.trim().toLowerCase()
+  const raw = readEnvOverride(env, 'TORCH_FLAVOR')?.toLowerCase()
   return raw === 'cuda' || raw === 'rocm' || raw === 'cpu' ? raw : null
 }
 
@@ -345,14 +350,14 @@ export async function detectGpuInfo(options: DetectOptions = {}): Promise<GpuInf
   const log      = options.onLog    ?? (() => {})
 
   const forced = readFlavorOverride(env)
-  if (forced) log(`[gpu-detect] MODLY_TORCH_FLAVOR=${forced} — skipping auto-detection`)
+  if (forced) log(`[gpu-detect] POLYPAL_TORCH_FLAVOR=${forced} — skipping auto-detection`)
 
   if (forced === 'cpu') return cpuInfo()
 
   if (forced === 'rocm') {
     const { gfxTarget } = await resolveGfxTarget(env, platform)
     if (!gfxTarget && platform === 'win32') {
-      log('[gpu-detect] ROCm forced on Windows but no compute target found — set MODLY_ROCM_GFX (e.g. gfx1200)')
+      log('[gpu-detect] ROCm forced on Windows but no compute target found — set POLYPAL_ROCM_GFX (e.g. gfx1200)')
       return cpuInfo()
     }
     return rocmInfo(gfxTarget, platform, env)
@@ -384,7 +389,7 @@ export async function detectGpuInfo(options: DetectOptions = {}): Promise<GpuInf
   if (amdAdapters.length > 0) {
     log(
       `[gpu-detect] AMD GPU found (${amdAdapters.join(', ')}) but its ROCm compute target is unknown. ` +
-      'Falling back to CPU — set MODLY_ROCM_GFX (e.g. gfx1201) to force one.',
+      'Falling back to CPU — set POLYPAL_ROCM_GFX (e.g. gfx1201) to force one.',
     )
   }
 
@@ -399,7 +404,7 @@ async function resolveGfxTarget(
   env: NodeJS.ProcessEnv,
   platform: string,
 ): Promise<{ gfxTarget: string | null; amdAdapters: string[] }> {
-  const override = env['MODLY_ROCM_GFX']?.trim()
+  const override = readEnvOverride(env, 'ROCM_GFX')
   if (override) return { gfxTarget: override, amdAdapters: [] }
   if (platform === 'linux') return { gfxTarget: readKfdGfxTarget(), amdAdapters: [] }
   if (platform === 'win32') return resolveWindowsGfxTarget(await queryWindowsVideoControllers())

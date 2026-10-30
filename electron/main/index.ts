@@ -75,7 +75,7 @@ function createWindow(): void {
   }
 }
 
-app.setName('Modly')
+app.setName('PolyPal')
 
 process.on('uncaughtException', (err) => {
   if ((err as NodeJS.ErrnoException).code === 'EPIPE') return
@@ -92,7 +92,7 @@ process.on('unhandledRejection', (reason) => {
 app.whenReady().then(async () => {
   archiveCurrentSession()
   logger.info(`App started — version ${app.getVersion()}`)
-  electronApp.setAppUserModelId('com.modly.app')
+  electronApp.setAppUserModelId('com.polypal.app')
 
   // Clear Chromium disk cache on startup to recover from any corruption
   await session.defaultSession.clearCache()
@@ -127,7 +127,7 @@ app.whenReady().then(async () => {
 })
 
 app.on('window-all-closed', () => {
-  // Modly holds a multi-GB Python subprocess; leaving it running in the
+  // PolyPal holds a multi-GB Python subprocess; leaving it running in the
   // Dock after the window closes (the Mac default) is the wrong behavior
   // for this app. Closing the window means quit.
   app.quit()

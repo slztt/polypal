@@ -6,14 +6,14 @@ import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
-const outfile = join(mkdtempSync(join(tmpdir(), 'modly-scene-source-')), 'scene.cjs')
+const outfile = join(mkdtempSync(join(tmpdir(), 'polypal-scene-source-')), 'scene.cjs')
 writeFileSync(outfile, buildSync({ entryPoints: [resolve('src/areas/workflows/workflowSceneSource.ts')], bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text)
 const {
   applySceneValidationResult,
   invalidateValidatedScenePath,
   resolveSceneSourceManifest,
 } = createRequire(import.meta.url)(outfile)
-const encoded = Buffer.from(JSON.stringify({ schema: 'modly.scene-manifest.v1', sceneRoot: '.', assets: [] })).toString('base64')
+const encoded = Buffer.from(JSON.stringify({ schema: 'polypal.scene-manifest.v1', sceneRoot: '.', assets: [] })).toString('base64')
 
 test('Load Scene resolves directory and manifest without image bytes', async () => {
   for (const scenePath of ['Workflows/room', 'Workflows/room/scene-manifest.json']) {

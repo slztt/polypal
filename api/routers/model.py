@@ -490,7 +490,7 @@ def _download_file_streamed(
         or os.environ.get("HUGGINGFACE_HUB_TOKEN")
         or os.environ.get("HUGGING_FACE_HUB_TOKEN")
     )
-    headers = {"User-Agent": "modly/0.3.1"}
+    headers = {"User-Agent": "polypal/0.3.1"}
     if hf_token:
         headers["Authorization"] = f"Bearer {hf_token}"
 

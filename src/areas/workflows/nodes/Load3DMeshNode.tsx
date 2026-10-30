@@ -3,7 +3,7 @@ import { Handle, Position, useReactFlow } from '@xyflow/react'
 import type { WFNodeData } from '@shared/types/electron.d'
 import BaseNode from './BaseNode'
 
-const OUTPUT_COLOR = '#a78bfa'
+const OUTPUT_COLOR = '#4ade80'
 
 export default function Load3DMeshNode({ id, data, selected }: { id: string; data: WFNodeData; selected?: boolean }) {
   const { updateNodeData } = useReactFlow()
@@ -46,7 +46,7 @@ export default function Load3DMeshNode({ id, data, selected }: { id: string; dat
       }
       subheader={
         <div ref={ioRowRef} className="flex items-center justify-end px-3 py-2">
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border border-violet-500/30 bg-violet-500/10 text-violet-400">mesh</span>
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border border-green-500/30 bg-green-500/10 text-green-400">mesh</span>
         </div>
       }
       handles={
@@ -60,7 +60,7 @@ export default function Load3DMeshNode({ id, data, selected }: { id: string; dat
           onClick={toggleSource}
           className="nodrag flex items-center gap-2 w-full text-left"
         >
-          <div className={`w-7 h-4 rounded-full relative transition-colors ${source === 'current' ? 'bg-violet-500' : 'bg-zinc-700'}`}>
+          <div className={`w-7 h-4 rounded-full relative transition-colors ${source === 'current' ? 'bg-green-500' : 'bg-zinc-700'}`}>
             <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${source === 'current' ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
           </div>
           <span className="text-[10px] text-zinc-400">Use current model</span>
@@ -82,7 +82,7 @@ export default function Load3DMeshNode({ id, data, selected }: { id: string; dat
           ) : (
             <button
               onClick={browse}
-              className="nodrag w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border border-dashed border-zinc-700 hover:border-violet-500/50 hover:bg-violet-500/5 transition-colors"
+              className="nodrag w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border border-dashed border-zinc-700 hover:border-green-500/50 hover:bg-green-500/5 transition-colors"
             >
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-500 shrink-0">
                 <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>

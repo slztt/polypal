@@ -9,7 +9,7 @@ import { join, resolve } from 'node:path'
 // Bundle the pure vramFit helper (no React deps) into CJS — same approach as
 // autoWire.test.mjs / preflight.test.mjs.
 function loadModule() {
-  const outfile = join(mkdtempSync(join(tmpdir(), 'modly-vramfit-test-')), 'vramFit.cjs')
+  const outfile = join(mkdtempSync(join(tmpdir(), 'polypal-vramfit-test-')), 'vramFit.cjs')
   const require = createRequire(import.meta.url)
   const result = buildSync({
     entryPoints: [resolve('src/shared/components/ui/vramFit.ts')],

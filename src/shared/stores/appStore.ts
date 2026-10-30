@@ -308,7 +308,7 @@ export const useAppStore = create<AppState>()(
       },
     }),
     {
-      name: 'modly-store',
+      name: 'polypal-store',
       partialize: (state) => ({
         generationOptions: state.generationOptions,
         showRamIndicator: state.showRamIndicator,

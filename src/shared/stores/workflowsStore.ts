@@ -37,11 +37,11 @@ interface WorkflowsStore {
 }
 
 /** Palette for folder colors (tab stripes / folder icons). */
-export const FOLDER_COLORS = ['#38bdf8', '#34d399', '#fbbf24', '#f87171', '#a78bfa', '#f472b6', '#94a3b8']
+export const FOLDER_COLORS = ['#38bdf8', '#34d399', '#fbbf24', '#f87171', '#fb923c', '#f472b6', '#94a3b8']
 
 // Empty folders have no workflow referencing them, so their names (and colors)
 // are persisted separately in localStorage to survive reloads.
-const FOLDERS_KEY = 'modly-workflow-folders'
+const FOLDERS_KEY = 'polypal-workflow-folders'
 
 function readStoredFolders(): { names: string[]; colors: Record<string, string>; bookmarked: string[] } {
   try {

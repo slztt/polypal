@@ -170,11 +170,11 @@ function DecimatePopover({
           onChange={(e) => setInputValue(e.target.value)}
           min={100}
           step={500}
-          className="bg-zinc-800 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 w-full focus:outline-none focus:border-violet-500 transition-colors"
+          className="bg-zinc-800 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 w-full focus:outline-none focus:border-green-500 transition-colors"
         />
         {reduction !== null && (
           <p className="text-[10px] text-zinc-500">
-            Reduction: <span className="text-violet-400">{reduction}%</span>
+            Reduction: <span className="text-green-400">{reduction}%</span>
           </p>
         )}
       </div>
@@ -189,7 +189,7 @@ function DecimatePopover({
         <button
           onClick={() => validTarget && onDecimate(validTarget)}
           disabled={decimating || !validTarget}
-          className="flex-1 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 font-medium"
+          className="flex-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 font-medium"
         >
           {decimating ? (
             <>
@@ -251,7 +251,7 @@ function LightPopover({
           step={0.1}
           value={intensity}
           onChange={(e) => onChange({ ...settings, [intensityKey]: parseFloat(e.target.value) })}
-          className="w-full h-1.5 accent-violet-500 cursor-pointer"
+          className="w-full h-1.5 accent-green-500 cursor-pointer"
         />
       </div>
     )
@@ -272,7 +272,7 @@ function LightPopover({
           step={0.05}
           value={value}
           onChange={(e) => onChange({ ...settings, [intensityKey]: parseFloat(e.target.value) })}
-          className="w-full h-1.5 accent-violet-500 cursor-pointer"
+          className="w-full h-1.5 accent-green-500 cursor-pointer"
         />
       </div>
     )
@@ -321,7 +321,7 @@ function LightPopover({
             onClick={() => onSelectPointLight(pl.id)}
             className={`flex flex-col gap-1.5 p-2 rounded-lg bg-zinc-800/40 border cursor-pointer transition-colors ${
               pl.id === selectedPointLightId
-                ? 'border-violet-500'
+                ? 'border-green-500'
                 : 'border-zinc-700/40 hover:border-zinc-600'
             }`}
           >
@@ -346,7 +346,7 @@ function LightPopover({
             </div>
             <input type="range" min={0} max={16} step={0.1} value={pl.intensity}
               onChange={(e) => onPointLightsChange(pointLights.map((p) => p.id === pl.id ? { ...p, intensity: parseFloat(e.target.value) } : p))}
-              className="w-full h-1.5 accent-violet-500 cursor-pointer" />
+              className="w-full h-1.5 accent-green-500 cursor-pointer" />
           </div>
         ))}
       </div>
@@ -392,7 +392,7 @@ function SmoothPopover({
           min={1}
           max={20}
           step={1}
-          className="bg-zinc-800 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 w-full focus:outline-none focus:border-violet-500 transition-colors"
+          className="bg-zinc-800 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 w-full focus:outline-none focus:border-green-500 transition-colors"
         />
         <p className="text-[10px] text-zinc-600">More iterations = smoother, but loses detail</p>
       </div>
@@ -407,7 +407,7 @@ function SmoothPopover({
         <button
           onClick={() => valid && onSmooth(parsed)}
           disabled={smoothing || !valid}
-          className="flex-1 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 font-medium"
+          className="flex-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 font-medium"
         >
           {smoothing ? (
             <>
@@ -543,7 +543,7 @@ function AssetLibraryPopover({
             value={searchQuery}
             onChange={(event) => onSearchQueryChange(event.target.value)}
             placeholder="Search by name, path, scope, or capability"
-            className="bg-zinc-800 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+            className="bg-zinc-800 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400"
           />
         </div>
         <div className="flex w-24 shrink-0 flex-col gap-1.5">
@@ -552,7 +552,7 @@ function AssetLibraryPopover({
             id="asset-library-sort"
             value={sortMode}
             onChange={(event) => onSortModeChange(event.target.value as AssetLibrarySortMode)}
-            className="bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+            className="bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400"
           >
             {ASSET_LIBRARY_SORT_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
@@ -579,7 +579,7 @@ function AssetLibraryPopover({
                   aria-expanded={scopeExpanded}
                   aria-controls={scopeRegionId}
                   onClick={() => onToggleSection(scopeGroup.sectionKey)}
-                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400"
                 >
                   <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300">{scopeGroup.sourceScopeLabel}</span>
                   <span className="text-[10px] text-zinc-500">{scopeExpanded ? 'Hide' : 'Show'}</span>
@@ -596,7 +596,7 @@ function AssetLibraryPopover({
                             aria-expanded={capabilityExpanded}
                             aria-controls={capabilityRegionId}
                             onClick={() => onToggleSection(group.sectionKey)}
-                            className="flex w-full items-center justify-between gap-2 px-4 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+                            className="flex w-full items-center justify-between gap-2 px-4 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400"
                           >
                             <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">{group.capabilityLabel}</span>
                             <span className="text-[10px] text-zinc-500">{capabilityExpanded ? 'Hide' : 'Show'}</span>
@@ -613,8 +613,8 @@ function AssetLibraryPopover({
                                     aria-pressed={selected}
                                     aria-label={`Select library asset ${entry.displayName}`}
                                     onClick={() => onSelectEntry(entry.id)}
-                                    className={`w-full text-left px-4 py-2 border-t border-zinc-800 first:border-t-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400
-                                      ${selected ? 'bg-violet-500/10 text-zinc-100' : 'text-zinc-300 hover:bg-zinc-800/80'}`}
+                                    className={`w-full text-left px-4 py-2 border-t border-zinc-800 first:border-t-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400
+                                      ${selected ? 'bg-green-500/10 text-zinc-100' : 'text-zinc-300 hover:bg-zinc-800/80'}`}
                                   >
                                     <div className="flex items-center justify-between gap-2">
                                       <span className="text-xs font-medium">{entry.displayName}</span>
@@ -647,7 +647,7 @@ function AssetLibraryPopover({
         onClick={onOpenSelected}
         disabled={openDisabled}
         aria-label="Open selected asset"
-        className="px-3 py-2 bg-violet-600 hover:bg-violet-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs rounded-lg transition-colors font-medium"
+        className="px-3 py-2 bg-green-600 hover:bg-green-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs rounded-lg transition-colors font-medium"
       >
         {opening ? 'Opening…' : 'Open selected asset'}
       </button>
@@ -764,7 +764,7 @@ export default function GeneratePage(): JSX.Element {
 
   function handleExport(format: 'glb' | 'obj' | 'stl' | 'ply') {
     if (!currentJob?.outputUrl) return
-    const stem = `modly-${Date.now()}`
+    const stem = `polypal-${Date.now()}`
     const link = document.createElement('a')
     if (format === 'glb') {
       link.href = `${apiUrl}${currentJob.outputUrl}`

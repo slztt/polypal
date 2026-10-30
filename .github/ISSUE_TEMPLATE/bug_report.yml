@@ -31,8 +31,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: Modly version
-      description: Which version of Modly are you running? (Help → About, or package.json)
+      label: PolyPal version
+      description: Which version of PolyPal are you running? (Help → About, or package.json)
       placeholder: 0.3.5
     validations:
       required: true
@@ -57,5 +57,5 @@ body:
       options:
         - label: I have searched existing issues and this has not been reported yet.
           required: true
-        - label: I can reproduce this on the latest version of Modly.
+        - label: I can reproduce this on the latest version of PolyPal.
           required: true

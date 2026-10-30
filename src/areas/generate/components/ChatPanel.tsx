@@ -129,10 +129,10 @@ function ActionsCard({ actions, onUndo }: { actions: ActionDone[]; onUndo?: () =
                 <span className="text-emerald-400 font-mono">{a.payload.face_count.toLocaleString()} faces</span>
               )}
               {a.payload?.type === 'run_workflow' && (
-                <span className="text-violet-400">{a.payload.workflow_name}</span>
+                <span className="text-green-400">{a.payload.workflow_name}</span>
               )}
               {a.payload?.type === 'create_workflow' && a.payload.workflow && (
-                <span className="text-violet-400">{a.payload.workflow.name}</span>
+                <span className="text-green-400">{a.payload.workflow.name}</span>
               )}
             </div>
           ))}
@@ -415,7 +415,7 @@ export default function ChatPanel(): JSX.Element {
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e)
-      setError(msg.includes('fetch') ? 'Cannot reach Modly API. Is the backend running?' : msg)
+      setError(msg.includes('fetch') ? 'Cannot reach PolyPal API. Is the backend running?' : msg)
     } finally {
       setIsLoading(false)
     }
@@ -619,7 +619,7 @@ export default function ChatPanel(): JSX.Element {
             value={input}
             onChange={(e) => { setInput(e.target.value); adjustHeight() }}
             onKeyDown={handleKeyDown}
-            placeholder="Ask Modly…"
+            placeholder="Ask PolyPal…"
             rows={1}
             spellCheck={false}
             className="w-full bg-transparent text-[12.5px] text-zinc-200 placeholder-zinc-600 focus:outline-none resize-none leading-relaxed overflow-hidden"

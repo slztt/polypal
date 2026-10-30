@@ -13,7 +13,7 @@ type Mode = 'image' | 'text' | 'mesh'
 const MODES: Record<Mode, { title: string; color: string; hint: string }> = {
   image: { title: 'For Each Image', color: '#38bdf8', hint: 'images' },
   text:  { title: 'For Each Text',  color: '#fbbf24', hint: 'text files' },
-  mesh:  { title: 'For Each Mesh',  color: '#a78bfa', hint: 'meshes' },
+  mesh:  { title: 'For Each Mesh',  color: '#4ade80', hint: 'meshes' },
 }
 
 export default function ForEachNode({ id, data, selected }: { id: string; data: WFNodeData; selected?: boolean }) {

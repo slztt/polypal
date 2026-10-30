@@ -130,7 +130,7 @@ function ToolbarButton({ active, label, onClick, children }: ToolbarButtonProps)
       className={`
         relative w-8 h-8 flex items-center justify-center rounded-lg transition-colors
         ${active
-          ? 'bg-violet-600 text-white'
+          ? 'bg-green-600 text-white'
           : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/60'
         }
       `}

@@ -37,8 +37,8 @@ import WorkflowEdge     from './nodes/WorkflowEdge'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const DRAG_KEY      = 'modly/extension-id'
-const DRAG_NODE_KEY = 'modly/node-type'
+const DRAG_KEY      = 'polypal/extension-id'
+const DRAG_NODE_KEY = 'polypal/node-type'
 const NODE_TYPES = { extensionNode: ExtensionNode, imageNode: ImageNode, textNode: TextNode, outputNode: AddToSceneNode, meshNode: Load3DMeshNode, sceneNode: LoadSceneNode, previewNode: PreviewImageNode, imagePreviewNode: ImagePreviewNode, waitNode: WaitNode, whileNode: WhileNode, forEachNode: ForEachNode }
 
 // Loop-container node types: resizable frames whose children form a loop body.
@@ -66,7 +66,7 @@ function findWhileContainerAt(nodes: Node[], pos: { x: number; y: number }): Nod
 const IO_STYLES: Record<'image' | 'text' | 'mesh' | 'audio' | 'scene', string> = {
   audio: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
   image: 'bg-sky-500/15 text-sky-400 border-sky-500/25',
-  mesh:  'bg-violet-500/15 text-violet-400 border-violet-500/25',
+  mesh:  'bg-green-500/15 text-green-400 border-green-500/25',
   text:  'bg-amber-500/15 text-amber-400 border-amber-500/25',
   scene: 'bg-pink-500/15 text-pink-400 border-pink-500/25',
 }
@@ -100,9 +100,9 @@ const PANEL_MAX = 860
 const PANEL_BUILTIN_NODES = [
   { type: 'imageNode',   label: 'Image',         color: '#38bdf8', icon: <><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></> },
   { type: 'textNode',    label: 'Text',           color: '#fbbf24', icon: <><path d="M17 6.1H3M21 12.1H3M15.1 18H3"/></> },
-  { type: 'meshNode',    label: 'Load 3D Mesh',   color: '#a78bfa', icon: <><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></> },
+  { type: 'meshNode',    label: 'Load 3D Mesh',   color: '#4ade80', icon: <><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></> },
   { type: 'sceneNode',   label: 'Load Scene',     color: '#f472b6', icon: <><path d="M4 7h16"/><path d="M7 4h10v16H7z"/></> },
-  { type: 'outputNode',  label: 'Add to Scene',   color: '#a78bfa', icon: <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></> },
+  { type: 'outputNode',  label: 'Add to Scene',   color: '#4ade80', icon: <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></> },
   { type: 'previewNode', label: 'Preview Views',  color: '#38bdf8', icon: <><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></> },
   { type: 'imagePreviewNode', label: 'Preview Image',  color: '#38bdf8', icon: <><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></> },
   { type: 'waitNode',    label: 'Wait',           color: '#71717a', icon: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></> },
@@ -348,9 +348,9 @@ function PanelToggleIcon({ open }: { open: boolean }) {
 const BUILTIN_NODES = [
   { type: 'imageNode',   label: 'Image',         color: '#38bdf8', description: 'Image input' },
   { type: 'textNode',    label: 'Text',           color: '#fbbf24', description: 'Text input' },
-  { type: 'meshNode',    label: 'Load 3D Mesh',   color: '#a78bfa', description: 'Load a 3D mesh file or use current model' },
+  { type: 'meshNode',    label: 'Load 3D Mesh',   color: '#4ade80', description: 'Load a 3D mesh file or use current model' },
   { type: 'sceneNode',   label: 'Load Scene',     color: '#f472b6', description: 'Load and validate a workspace scene directory' },
-  { type: 'outputNode',  label: 'Add to Scene',   color: '#a78bfa', description: 'Output node — adds the mesh to the 3D scene' },
+  { type: 'outputNode',  label: 'Add to Scene',   color: '#4ade80', description: 'Output node — adds the mesh to the 3D scene' },
   { type: 'previewNode', label: 'Preview Views',  color: '#38bdf8', description: 'Displays multi-view image outputs in a 2×3 grid' },
   { type: 'imagePreviewNode', label: 'Preview Image',  color: '#38bdf8', description: 'Displays a single image output in the workflow' },
   { type: 'waitNode',    label: 'Wait',           color: '#71717a', description: 'Pauses the workflow until you click Continue' },
@@ -527,7 +527,7 @@ function NodePalette({
                     onClick={() => onSelect('extensionNode', e.id)}
                     className={`w-full flex items-center gap-3 px-4 pl-9 py-2.5 transition-colors ${isActive ? 'bg-zinc-800' : 'hover:bg-zinc-800/50'}`}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-violet-400" />
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-green-400" />
                     <span className="text-sm text-zinc-200">{e.name}</span>
                     <div className="flex items-center gap-1 ml-auto shrink-0">
                       <span className="text-[10px] text-zinc-500">{e.input}</span>
@@ -633,7 +633,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
               </div>
 
               <div className="flex items-start gap-3 p-3 rounded-xl bg-zinc-800/50 border border-zinc-700/40">
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border border-violet-500/30 bg-violet-500/10 text-violet-400 shrink-0 mt-0.5">mesh</span>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border border-green-500/30 bg-green-500/10 text-green-400 shrink-0 mt-0.5">mesh</span>
                 <div>
                   <p className="text-[11px] font-medium text-zinc-200">Load 3D Mesh</p>
                   <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">Source node. Load a .glb, .obj, .stl, .ply or .splat file from disk, or use the model currently loaded in the 3D viewer.</p>
@@ -644,7 +644,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
                 <div className="flex gap-1 shrink-0 mt-0.5">
                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border border-sky-500/30 bg-sky-500/10 text-sky-400">image</span>
                   <span className="text-zinc-600 text-[9px] flex items-center">→</span>
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border border-violet-500/30 bg-violet-500/10 text-violet-400">mesh</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border border-green-500/30 bg-green-500/10 text-green-400">mesh</span>
                 </div>
                 <div>
                   <p className="text-[11px] font-medium text-zinc-200">Model extension <span className="text-[10px] font-normal text-zinc-500">(AI generator)</span></p>
@@ -654,9 +654,9 @@ function HelpModal({ onClose }: { onClose: () => void }) {
 
               <div className="flex items-start gap-3 p-3 rounded-xl bg-zinc-800/50 border border-zinc-700/40">
                 <div className="flex gap-1 shrink-0 mt-0.5">
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border border-violet-500/30 bg-violet-500/10 text-violet-400">mesh</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border border-green-500/30 bg-green-500/10 text-green-400">mesh</span>
                   <span className="text-zinc-600 text-[9px] flex items-center">→</span>
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border border-violet-500/30 bg-violet-500/10 text-violet-400">mesh</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border border-green-500/30 bg-green-500/10 text-green-400">mesh</span>
                 </div>
                 <div>
                   <p className="text-[11px] font-medium text-zinc-200">Process extension <span className="text-[10px] font-normal text-zinc-500">(mesh processor)</span></p>
@@ -665,7 +665,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
               </div>
 
               <div className="flex items-start gap-3 p-3 rounded-xl bg-zinc-800/50 border border-zinc-700/40">
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border border-violet-500/30 bg-violet-500/10 text-violet-400 shrink-0 mt-0.5">scene</span>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border border-green-500/30 bg-green-500/10 text-green-400 shrink-0 mt-0.5">scene</span>
                 <div>
                   <p className="text-[11px] font-medium text-zinc-200">Add to Scene</p>
                   <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">Terminal node. Receives the final mesh and loads it directly into the 3D viewer when the workflow completes.</p>
@@ -1373,14 +1373,14 @@ function WorkflowCanvasInner({
 // Schematic thumbnail of a workflow's graph for the Open popup cards — plain
 // SVG built from stored node positions, no React Flow instance needed.
 
-// Node tint by role, echoing the real canvas: inputs green, processing violet,
+// Node tint by role, echoing the real canvas: inputs amber, processing green,
 // outputs blue, everything else neutral.
 const MINI_NODE_TINTS: Record<string, { fill: string; stroke: string }> = {
-  imageNode:     { fill: 'rgba(52,211,153,0.22)',  stroke: '#34d399' },
-  textNode:      { fill: 'rgba(52,211,153,0.22)',  stroke: '#34d399' },
-  meshNode:      { fill: 'rgba(52,211,153,0.22)',  stroke: '#34d399' },
+  imageNode:     { fill: 'rgba(251,191,36,0.22)',  stroke: '#fbbf24' },
+  textNode:      { fill: 'rgba(251,191,36,0.22)',  stroke: '#fbbf24' },
+  meshNode:      { fill: 'rgba(251,191,36,0.22)',  stroke: '#fbbf24' },
   sceneNode:     { fill: 'rgba(244,114,182,0.22)', stroke: '#f472b6' },
-  extensionNode: { fill: 'rgba(167,139,250,0.24)', stroke: '#a78bfa' },
+  extensionNode: { fill: 'rgba(74,222,128,0.24)', stroke: '#4ade80' },
   outputNode:    { fill: 'rgba(56,189,248,0.22)',  stroke: '#38bdf8' },
   previewNode:   { fill: 'rgba(56,189,248,0.22)',  stroke: '#38bdf8' },
 }
@@ -1610,12 +1610,12 @@ export default function WorkflowsPage(): JSX.Element {
         key={wf.id}
         draggable
         onDragStart={(e) => {
-          e.dataTransfer.setData('modly/workflow-id', wf.id)
+          e.dataTransfer.setData('polypal/workflow-id', wf.id)
           e.dataTransfer.effectAllowed = 'move'
         }}
         onClick={() => { openWorkflow(wf.id); setOpenListVisible(false) }}
         className={`group relative flex flex-col rounded-lg overflow-hidden border cursor-pointer transition-colors
-          ${isOpen ? 'border-violet-500/50 bg-violet-500/10' : 'border-zinc-800 bg-zinc-950/40 hover:border-zinc-700 hover:bg-zinc-800/40'}`}
+          ${isOpen ? 'border-green-500/50 bg-green-500/10' : 'border-zinc-800 bg-zinc-950/40 hover:border-zinc-700 hover:bg-zinc-800/40'}`}
       >
         <div className="relative h-[72px] border-b border-zinc-800/60 bg-zinc-950/50">
           {workflowColor(wf) && (
@@ -1691,7 +1691,7 @@ export default function WorkflowsPage(): JSX.Element {
             e.preventDefault()
             e.stopPropagation()
             setDragOverFolder(null)
-            const id = e.dataTransfer.getData('modly/workflow-id')
+            const id = e.dataTransfer.getData('polypal/workflow-id')
             if (id) handleMoveToFolder(id, folder)
           }}
           className={`group flex items-center gap-2 px-4 py-2 cursor-pointer text-zinc-400 hover:text-zinc-200 transition-colors
@@ -1820,9 +1820,9 @@ export default function WorkflowsPage(): JSX.Element {
             <div
               key={wf.id}
               draggable
-              onDragStart={(e) => { e.dataTransfer.setData('modly/tab-id', wf.id); e.dataTransfer.effectAllowed = 'move' }}
+              onDragStart={(e) => { e.dataTransfer.setData('polypal/tab-id', wf.id); e.dataTransfer.effectAllowed = 'move' }}
               onDragOver={(e) => {
-                if (!e.dataTransfer.types.includes('modly/tab-id')) return
+                if (!e.dataTransfer.types.includes('polypal/tab-id')) return
                 e.preventDefault()
                 setDragOverTab(wf.id)
               }}
@@ -1830,7 +1830,7 @@ export default function WorkflowsPage(): JSX.Element {
               onDrop={(e) => {
                 e.preventDefault()
                 setDragOverTab(null)
-                const dragId = e.dataTransfer.getData('modly/tab-id')
+                const dragId = e.dataTransfer.getData('polypal/tab-id')
                 if (dragId) moveOpenTab(dragId, wf.id)
               }}
               onClick={() => setActive(wf.id)}
@@ -2087,7 +2087,7 @@ export default function WorkflowsPage(): JSX.Element {
                 // Drop on the list background (not a folder) → move back to root
                 e.preventDefault()
                 setDragOverFolder(null)
-                const id = e.dataTransfer.getData('modly/workflow-id')
+                const id = e.dataTransfer.getData('polypal/workflow-id')
                 if (id) handleMoveToFolder(id, undefined)
               }}
             >

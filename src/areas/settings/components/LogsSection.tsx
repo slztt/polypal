@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 const LOG_FILES = [
   { id: 'errors.log',  label: 'Errors',  description: 'All errors from Electron and Python' },
   { id: 'runtime.log', label: 'Runtime', description: 'FastAPI / Python output' },
-  { id: 'modly.log',   label: 'App',     description: 'General Electron logs' },
+  { id: 'polypal.log',   label: 'App',     description: 'General Electron logs' },
 ]
 
 function formatSession(id: string): string {

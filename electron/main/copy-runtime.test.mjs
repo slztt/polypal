@@ -15,7 +15,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve, isAbsolute } from 'node:path'
 
 function loadModule() {
-  const outfile = join(mkdtempSync(join(tmpdir(), 'modly-copy-test-')), 'copy-runtime.cjs')
+  const outfile = join(mkdtempSync(join(tmpdir(), 'polypal-copy-test-')), 'copy-runtime.cjs')
   const require = createRequire(import.meta.url)
   const result = buildSync({
     entryPoints: [resolve('electron/main/copy-runtime.ts')],
@@ -49,7 +49,7 @@ function makeRuntime(root) {
 }
 
 test('copyRuntimeTree keeps relative symlinks relative', symlinkOpts, async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'modly-runtime-'))
+  const dir = mkdtempSync(join(tmpdir(), 'polypal-runtime-'))
   const source = join(dir, 'mount', 'python-embed')
   const dest   = join(dir, 'stable', 'python-embed')
   makeRuntime(source)
@@ -71,7 +71,7 @@ test('copyRuntimeTree keeps relative symlinks relative', symlinkOpts, async () =
 test('the copy survives the source being deleted', symlinkOpts, async () => {
   // This is the actual failure mode: the AppImage mount disappears between
   // launches, and every venv built from the copy dies with it.
-  const dir = mkdtempSync(join(tmpdir(), 'modly-runtime-'))
+  const dir = mkdtempSync(join(tmpdir(), 'polypal-runtime-'))
   const source = join(dir, 'mount', 'python-embed')
   const dest   = join(dir, 'stable', 'python-embed')
   makeRuntime(source)
@@ -86,7 +86,7 @@ test('the copy survives the source being deleted', symlinkOpts, async () => {
 })
 
 test('copyRuntimeTree copies regular files and directory structure', symlinkOpts, async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'modly-runtime-'))
+  const dir = mkdtempSync(join(tmpdir(), 'polypal-runtime-'))
   const source = join(dir, 'mount', 'python-embed')
   const dest   = join(dir, 'stable', 'python-embed')
   makeRuntime(source)

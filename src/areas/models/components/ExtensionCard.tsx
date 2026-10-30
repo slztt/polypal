@@ -50,7 +50,7 @@ export function ExtensionCard({
   if (loadError) {
     status = <StatusBadge tone="amber">Load error</StatusBadge>
   } else if (installing) {
-    status = <StatusBadge tone="violet">Installing…</StatusBadge>
+    status = <StatusBadge tone="accent">Installing…</StatusBadge>
   } else if (!isModel) {
     status = <StatusBadge tone="green">Ready</StatusBadge>
   } else if (done === total) {

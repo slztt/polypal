@@ -1,5 +1,5 @@
 name: 🧩 Bug report — Official extension
-description: Report a bug in one of Modly's official extensions
+description: Report a bug in one of PolyPal's official extensions
 labels: [bug, extension, "pending triage"]
 body:
   - type: markdown
@@ -7,7 +7,7 @@ body:
       value: |
         **Before You Start...**
 
-        This form is only for bugs in **official extensions** shipped with Modly.
+        This form is only for bugs in **official extensions** shipped with PolyPal.
         For core app bugs, use the regular *Bug report* instead.
         - Search existing issues — your problem may already be reported or fixed in a newer version.
         - Make sure the extension is up to date — **extensions do not update automatically**, so a fix may already be available in a newer version.
@@ -18,7 +18,7 @@ body:
     attributes:
       label: Which official extension?
       description: Name of the official extension affected.
-      placeholder: e.g. modly-hunyuan3d-mini-extension
+      placeholder: e.g. polypal-hunyuan3d-mini-extension
     validations:
       required: true
   - type: textarea
@@ -42,8 +42,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: Modly version
-      description: Which version of Modly are you running? (Help → About, or package.json)
+      label: PolyPal version
+      description: Which version of PolyPal are you running? (Help → About, or package.json)
       placeholder: 0.3.5
     validations:
       required: true
@@ -58,7 +58,7 @@ body:
     id: gpu
     attributes:
       label: GPU
-      description: Which GPU are you using? (Modly runs locally on your GPU)
+      description: Which GPU are you using? (PolyPal runs locally on your GPU)
       placeholder: e.g. NVIDIA RTX 4070 / Apple M3 / AMD RX 7800 XT
     validations:
       required: true
@@ -76,5 +76,5 @@ body:
       options:
         - label: I have searched existing issues and this has not been reported yet.
           required: true
-        - label: I can reproduce this on the latest version of Modly.
+        - label: I can reproduce this on the latest version of PolyPal.
           required: true

@@ -89,7 +89,7 @@ function writeSTL(prims: PrimGeometry[], outPath: string): void {
 // ─── OBJ ──────────────────────────────────────────────────────────────────────
 
 function writeOBJ(prims: PrimGeometry[], outPath: string): void {
-  const lines: string[] = ['# Exported by Modly mesh-exporter', '']
+  const lines: string[] = ['# Exported by PolyPal mesh-exporter', '']
   let vOff = 1, vnOff = 1, vtOff = 1
 
   for (let pi = 0; pi < prims.length; pi++) {
@@ -143,7 +143,7 @@ function writePLY(prims: PrimGeometry[], outPath: string): void {
   const header = [
     'ply',
     'format ascii 1.0',
-    'comment Exported by Modly mesh-exporter',
+    'comment Exported by PolyPal mesh-exporter',
     `element vertex ${totalVerts}`,
     'property float x', 'property float y', 'property float z',
     ...(hasNormals ? ['property float nx', 'property float ny', 'property float nz'] : []),

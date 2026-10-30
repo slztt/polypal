@@ -27,7 +27,7 @@ type PanelMode = 'basic' | 'chat'
 
 const TYPE_COLOR: Record<string, string> = {
   image: '#38bdf8',
-  mesh:  '#a78bfa',
+  mesh:  '#4ade80',
   text:  '#fbbf24',
 }
 
@@ -245,7 +245,7 @@ function MeshParamRow({ nodeId, nodes, onPatch }: { nodeId: string; nodes: FlowN
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-1.5">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2">
           <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
         </svg>
         <span className="text-[11px] font-medium text-zinc-300">Load 3D Mesh</span>
@@ -253,7 +253,7 @@ function MeshParamRow({ nodeId, nodes, onPatch }: { nodeId: string; nodes: FlowN
 
       {/* Toggle: use current model */}
       <button onClick={toggleSource} className="flex items-center gap-2 w-full text-left">
-        <div className={`w-7 h-4 rounded-full relative shrink-0 transition-colors ${source === 'current' ? 'bg-violet-500' : 'bg-zinc-700'}`}>
+        <div className={`w-7 h-4 rounded-full relative shrink-0 transition-colors ${source === 'current' ? 'bg-green-500' : 'bg-zinc-700'}`}>
           <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${source === 'current' ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
         </div>
         <span className="text-[10px] text-zinc-400">Use current model</span>
@@ -263,7 +263,7 @@ function MeshParamRow({ nodeId, nodes, onPatch }: { nodeId: string; nodes: FlowN
         fileName ? (
           <button onClick={browse}
             className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors group">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" className="shrink-0">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2" className="shrink-0">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
             </svg>
             <span className="text-[10px] text-zinc-300 truncate flex-1 text-left">{fileName}</span>
@@ -271,7 +271,7 @@ function MeshParamRow({ nodeId, nodes, onPatch }: { nodeId: string; nodes: FlowN
           </button>
         ) : (
           <button onClick={browse}
-            className="w-full flex items-center justify-center gap-2 py-5 rounded-lg border border-dashed border-zinc-700 hover:border-violet-500/50 hover:bg-violet-500/5 transition-colors">
+            className="w-full flex items-center justify-center gap-2 py-5 rounded-lg border border-dashed border-zinc-700 hover:border-green-500/50 hover:bg-green-500/5 transition-colors">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-zinc-600">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
             </svg>

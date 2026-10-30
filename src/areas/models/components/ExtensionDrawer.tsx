@@ -170,7 +170,7 @@ export function ExtensionDrawer({
               <div className="min-w-0">
                 <p className="text-[12px] font-semibold text-amber-400">Corrupted installation</p>
                 <p className="text-[11px] leading-5 text-amber-400/80 mt-1">
-                  {ext.builtin ? 'This built-in extension folder is damaged — restart Modly to let it re-sync.' : corruptedMsg}
+                  {ext.builtin ? 'This built-in extension folder is damaged — restart PolyPal to let it re-sync.' : corruptedMsg}
                 </p>
               </div>
             </div>

@@ -21,8 +21,8 @@ import { DEFAULT_LIGHT_SETTINGS } from '@shared/stores/appStore'
 
 export type GizmoMode = 'translate' | 'rotate' | 'scale'
 
-const SELECTION_OUTLINE_VISIBLE_COLOR = 0x8b5cf6
-const SELECTION_OUTLINE_HIDDEN_COLOR = 0x5b21b6
+const SELECTION_OUTLINE_VISIBLE_COLOR = 0x22c55e
+const SELECTION_OUTLINE_HIDDEN_COLOR = 0x15803d
 const SELECTION_OUTLINE_EDGE_STRENGTH = 2.5
 const SELECTION_OUTLINE_BLUR = false
 const SELECTION_OUTLINE_MULTISAMPLING = 0
@@ -64,7 +64,7 @@ function createCheckerTexture(): THREE.CanvasTexture {
   return tex
 }
 
-const SELECTION_OUTLINE_COLOR = '#8b5cf6'
+const SELECTION_OUTLINE_COLOR = '#22c55e'
 
 function makeLightBulbTexture(color: string, isSelected: boolean): THREE.CanvasTexture {
   const size = 64
@@ -76,7 +76,7 @@ function makeLightBulbTexture(color: string, isSelected: boolean): THREE.CanvasT
   const cy = size / 2
 
   // Draws the bulb glyph (rays + circle + base). `pad` grows every part by a
-  // few pixels — used to lay down an oversized violet silhouette behind the
+  // few pixels — used to lay down an oversized accent-green silhouette behind the
   // normal-sized icon, so the outline hugs the actual glyph shape instead of
   // being a plain circle around it.
   const drawGlyph = (fillColor: string, pad: number) => {
@@ -1010,7 +1010,7 @@ export default function Viewer3D({
       : canvasRef.current?.toDataURL('image/png') ?? null
     if (!dataUrl) return
     const link = document.createElement('a')
-    link.download = `modly-${Date.now()}.png`
+    link.download = `polypal-${Date.now()}.png`
     link.href = dataUrl
     link.click()
   }

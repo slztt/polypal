@@ -334,7 +334,7 @@ async def import_mesh_by_path(body: ImportByPathRequest):
         return {"url": f"/optimize/serve-file?path={quote(str(file_path))}"}
 
     if ext == "ply" and _is_gaussian_ply(file_path):
-        tmp_dir = tempfile.mkdtemp(prefix="modly_import_")
+        tmp_dir = tempfile.mkdtemp(prefix="polypal_import_")
         output_path = os.path.join(tmp_dir, "splat.splat")
         try:
             _convert_gaussian_ply_to_splat(file_path, output_path)
@@ -348,7 +348,7 @@ async def import_mesh_by_path(body: ImportByPathRequest):
         return {"url": f"/optimize/serve-file?path={quote(str(file_path))}"}
 
     # Mesh ply / obj / stl: convert to GLB in a temp directory (not the workspace)
-    tmp_dir = tempfile.mkdtemp(prefix="modly_import_")
+    tmp_dir = tempfile.mkdtemp(prefix="polypal_import_")
     output_path = os.path.join(tmp_dir, "mesh.glb")
     loaded = trimesh.load(str(file_path))
     loaded.export(output_path)
@@ -395,7 +395,7 @@ def ply_to_splat(path: str):
         raise HTTPException(400, "Not a Gaussian .ply")
 
     key = hashlib.md5(f"{src}:{int(src.stat().st_mtime)}:{_SPLAT_CONV_VERSION}".encode()).hexdigest()
-    out = Path(tempfile.gettempdir()) / f"modly_splat_{key}.splat"
+    out = Path(tempfile.gettempdir()) / f"polypal_splat_{key}.splat"
     if not out.is_file():
         try:
             _convert_gaussian_ply_to_splat(src, str(out))

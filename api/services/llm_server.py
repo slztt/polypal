@@ -1,8 +1,8 @@
 """
 Local LLM engine — manages a llama.cpp `llama-server` subprocess.
 
-Everything lives under the agent directory (MODLY_LLM_DIR, set by Electron to
-the `agent` folder beside models/, extensions/, … — ~/.modly/llm/ when the API
+Everything lives under the agent directory (POLYPAL_LLM_DIR, set by Electron to
+the `agent` folder beside models/, extensions/, … — ~/.polypal/llm/ when the API
 runs standalone):
   bin/         llama-server binary + DLLs (auto-downloaded from GitHub releases)
   models/      GGUF files (catalog downloads + any custom .gguf the user drops in)
@@ -29,15 +29,15 @@ from typing import Callable, Optional
 from urllib.request import Request, urlopen
 import json as _json
 
-LLM_DIR        = Path(os.environ.get("MODLY_LLM_DIR") or Path.home() / ".modly" / "llm")
+LLM_DIR        = Path(os.environ.get("POLYPAL_LLM_DIR") or Path.home() / ".polypal" / "llm")
 BIN_DIR        = LLM_DIR / "bin"
 LLM_MODELS_DIR = LLM_DIR / "models"
 LOGS_DIR       = LLM_DIR / "logs"
-SERVER_PORT    = int(os.environ.get("MODLY_LLM_PORT", "8791"))
+SERVER_PORT    = int(os.environ.get("POLYPAL_LLM_PORT", "8791"))
 
-# Modly is first and foremost a 3D-generation app: the LLM must never sit on
+# PolyPal is first and foremost a 3D-generation app: the LLM must never sit on
 # VRAM it isn't using. Idle models are evicted after this many seconds.
-IDLE_TTL_SECONDS = int(os.environ.get("MODLY_LLM_IDLE_TTL", "300"))
+IDLE_TTL_SECONDS = int(os.environ.get("POLYPAL_LLM_IDLE_TTL", "300"))
 
 # Multi-model pool: each loaded model gets its own llama-server process on its
 # own port (SERVER_PORT .. SERVER_PORT+MAX_SLOT_PORTS-1). How many may run at
@@ -82,10 +82,10 @@ def detect_vram_gb() -> float:
 def resolve_max_models() -> int:
     """How many llama-server processes may run at once.
 
-    Priority: MODLY_LLM_MAX_MODELS env → user config → auto from VRAM.
+    Priority: POLYPAL_LLM_MAX_MODELS env → user config → auto from VRAM.
     Auto is deliberately conservative: 8 GB cards keep the single-slot
     behavior, VRAM stays available for the 3D pipeline."""
-    raw = os.environ.get("MODLY_LLM_MAX_MODELS") or load_config().get("max_models") or "auto"
+    raw = os.environ.get("POLYPAL_LLM_MAX_MODELS") or load_config().get("max_models") or "auto"
     if isinstance(raw, str) and raw.lower() == "auto":
         # Thresholds sit just under the marketing size on purpose: a card sold
         # as "12 GB" reports 12227 MiB = 11.9 GiB, so a `>= 12` test excluded
@@ -101,13 +101,13 @@ def resolve_max_models() -> int:
     return max(1, min(n, MAX_SLOT_PORTS))
 
 _BINARY_NAME = "llama-server.exe" if sys.platform == "win32" else "llama-server"
-_UA          = {"User-Agent": "modly-llm"}
+_UA          = {"User-Agent": "polypal-llm"}
 
 # Pinned to a known-good tag by default so installs are reproducible and never
-# silently pick up a broken/incompatible "latest" release. Set MODLY_LLM_RELEASE
+# silently pick up a broken/incompatible "latest" release. Set POLYPAL_LLM_RELEASE
 # to another llama.cpp tag (e.g. "b10075") to override, or to "latest" to track
 # the newest release.
-_RELEASE_TAG  = os.environ.get("MODLY_LLM_RELEASE", "b10075")
+_RELEASE_TAG  = os.environ.get("POLYPAL_LLM_RELEASE", "b10075")
 _RELEASES_API = (
     "https://api.github.com/repos/ggml-org/llama.cpp/releases/latest"
     if _RELEASE_TAG.lower() == "latest"
@@ -213,7 +213,7 @@ def vram_budget_mb() -> int:
     total = detect_vram_gb() * 1024
     if total <= 0:
         return 0
-    reserve = _env_int("MODLY_LLM_VRAM_RESERVE_MB", 768)
+    reserve = _env_int("POLYPAL_LLM_VRAM_RESERVE_MB", 768)
     return max(0, int(total) - reserve)
 
 
@@ -462,9 +462,9 @@ def install_binary(progress_cb: Callable[[dict], None], control_check: Callable[
 
 
 # ─── Orphan prevention ────────────────────────────────────────────────────────
-# If Modly is force-killed, a plain child process would keep its model in
+# If PolyPal is force-killed, a plain child process would keep its model in
 # memory forever. On Windows we put llama-server in a Job object with
-# KILL_ON_JOB_CLOSE (the OS kills it when Modly dies); on Linux we ask the
+# KILL_ON_JOB_CLOSE (the OS kills it when PolyPal dies); on Linux we ask the
 # kernel to deliver SIGKILL on parent death.
 
 _win_job_handle = None
@@ -539,7 +539,7 @@ def _linux_preexec():
 
 
 def _kill_stale_server(port: int = SERVER_PORT) -> None:
-    """Kill a leftover llama-server holding `port` (e.g. after a force-kill of Modly)."""
+    """Kill a leftover llama-server holding `port` (e.g. after a force-kill of PolyPal)."""
     try:
         with urlopen(Request(f"http://127.0.0.1:{port}/health", headers=_UA), timeout=1) as r:
             if r.status != 200:

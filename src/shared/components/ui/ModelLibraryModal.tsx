@@ -372,7 +372,7 @@ export function ModelLibraryModal({ onClose }: { onClose: () => void }): JSX.Ele
 
           {status === null && (
             <p className="text-[11px] text-zinc-500 flex items-center gap-2">
-              Cannot reach the Modly API.
+              Cannot reach the PolyPal API.
               {/* The library does not poll, so a backend that was still starting
                 * up needs a way back in short of reopening the modal. */}
               <button onClick={() => { void refresh() }} className="text-accent-light hover:underline underline-offset-2">

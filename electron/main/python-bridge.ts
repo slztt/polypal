@@ -55,7 +55,7 @@ export class PythonBridge {
         PYTHONUNBUFFERED:       '1',
         // mesh_ops uses Electron in Node mode for the existing meshoptimizer
         // backend, so packaged builds do not depend on a system Node install.
-        MODLY_NODE_EXECUTABLE:  process.execPath,
+        POLYPAL_NODE_EXECUTABLE:  process.execPath,
         // We decode both pipes as UTF-8 below (Buffer.toString() default), and
         // the API forwards extension output — tqdm bars included — through its
         // own stderr. Without this the API would encode them with the Windows
@@ -66,7 +66,7 @@ export class PythonBridge {
         WORKSPACE_DIR:          this.resolveWorkspaceDir(),
         EXTENSIONS_DIR:         this.resolveExtensionsDir(),
         // llm_server.py keeps everything of the local LLM here: engine, GGUF models, logs, config.
-        MODLY_LLM_DIR:          this.resolveAgentDir(),
+        POLYPAL_LLM_DIR:          this.resolveAgentDir(),
         SELECTED_MODEL_ID:      process.env['SELECTED_MODEL_ID'] ?? '',
         HUGGING_FACE_HUB_TOKEN: this.resolveHfToken(),
         HF_TOKEN:               this.resolveHfToken(),

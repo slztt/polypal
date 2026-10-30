@@ -93,23 +93,23 @@ const MCP_CLIENTS: { value: McpClient; label: string; path: string; config: stri
     value:  'claude',
     label:  'Claude Desktop',
     path:   '~/.config/claude/claude_desktop_config.json',
-    config: `{\n  "mcpServers": {\n    "modly": {\n      "command": "modly-mcp"\n    }\n  }\n}`,
+    config: `{\n  "mcpServers": {\n    "polypal": {\n      "command": "polypal-mcp"\n    }\n  }\n}`,
   },
   {
     value:  'codex',
     label:  'Codex CLI',
     path:   '~/.codex/config.toml',
-    config: `[mcp_servers.modly]\ncommand = "modly-mcp"`,
+    config: `[mcp_servers.polypal]\ncommand = "polypal-mcp"`,
   },
   {
     value:  'opencode',
     label:  'OpenCode',
     path:   '~/.config/opencode/config.json',
-    config: `{\n  "$schema": "https://opencode.ai/config.json",\n  "mcp": {\n    "modly": {\n      "type": "local",\n      "command": ["modly-mcp"]\n    }\n  }\n}`,
+    config: `{\n  "$schema": "https://opencode.ai/config.json",\n  "mcp": {\n    "polypal": {\n      "type": "local",\n      "command": ["polypal-mcp"]\n    }\n  }\n}`,
   },
 ]
 
-const MCP_INSTALL = 'npm install -g modly-cli-mcp'
+const MCP_INSTALL = 'npm install -g polypal-cli-mcp'
 
 const THINKING_OPTIONS: { value: ThinkingMode; label: string; desc: string }[] = [
   { value: 'auto', label: 'Auto',     desc: 'The model decides whether to think' },
@@ -414,7 +414,7 @@ export function AgentSection(): JSX.Element {
                     value={opt.value}
                     checked={defaultThinking === opt.value}
                     onChange={() => setDefaultThinking(opt.value)}
-                    className="mt-0.5 accent-violet-500"
+                    className="mt-0.5 accent-green-500"
                   />
                   <div>
                     <p className="text-xs font-medium text-zinc-300 group-hover:text-zinc-100 transition-colors">{opt.label}</p>
@@ -430,7 +430,7 @@ export function AgentSection(): JSX.Element {
         <div className="flex flex-col gap-4 min-w-0">
           <Card
             title="MCP server"
-            description={<>Control Modly from Claude Desktop, Codex or OpenCode. Community package by <span className="text-zinc-300">DrHepa</span>.</>}
+            description={<>Control PolyPal from Claude Desktop, Codex or OpenCode. Community package by <span className="text-zinc-300">DrHepa</span>.</>}
             aside={<Badge tone="muted">Community</Badge>}
           >
             <Block>

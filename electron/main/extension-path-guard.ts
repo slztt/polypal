@@ -54,17 +54,17 @@ export function resolveExtensionPathWithinRoot(rootDir: string, extensionId: unk
 // for install machinery: staging copies, backups of the previous version.
 // Both the Electron and Python discovery sides must skip them.
 
-export const EXT_BACKUP_PREFIX  = '.modly-backup-'
-export const EXT_STAGING_PREFIX = '.modly-staging-'
+export const EXT_BACKUP_PREFIX  = '.polypal-backup-'
+export const EXT_STAGING_PREFIX = '.polypal-staging-'
 // Marker file inside an extension folder while its setup is still running —
 // presence after a crash means the install never completed.
-export const EXT_INCOMPLETE_MARKER = '.modly-incomplete'
+export const EXT_INCOMPLETE_MARKER = '.polypal-incomplete'
 // Reserved basename for registration-pending state. Active transactions append
 // "-<extension-id>-<timestamp>" and live beside extension folders so linked
 // source trees are never mutated.
-export const EXT_REGISTRATION_PENDING_MARKER = '.modly-registration-pending'
+export const EXT_REGISTRATION_PENDING_MARKER = '.polypal-registration-pending'
 // Reserved basename for the matching validated transaction commit marker.
-export const EXT_VALIDATED_MARKER = '.modly-registration-validated'
+export const EXT_VALIDATED_MARKER = '.polypal-registration-validated'
 
 export function isInternalExtensionDirName(name: string): boolean {
   return name.startsWith('.')
@@ -76,7 +76,7 @@ export function buildExtensionBackupPath(rootDir: string, extensionId: unknown, 
 }
 
 // A backup dir is the previous version of an extension, parked during an
-// install swap. Its name embeds the extension id: .modly-backup-<id>-<ts>.
+// install swap. Its name embeds the extension id: .polypal-backup-<id>-<ts>.
 // Ids may contain '-', so strip the numeric timestamp suffix, not a naive split.
 export function parseExtensionBackupName(name: string): { extensionId: string } | null {
   if (!name.startsWith(EXT_BACKUP_PREFIX)) return null

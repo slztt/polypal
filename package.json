@@ -1,9 +1,9 @@
 {
-  "name": "modly",
+  "name": "polypal",
   "version": "0.4.3",
-  "description": "Local AI-powered 3D mesh generation from images",
+  "description": "PolyPal — local AI-powered 3D mesh generation, editing and diagnostics",
   "main": "./out/main/index.js",
-  "author": "Modly",
+  "author": "PolyPal",
   "private": true,
   "scripts": {
     "dev": "node scripts/build-builtins.mjs && electron-vite dev",
@@ -62,8 +62,8 @@
     "esbuild": "^0.28.0"
   },
   "build": {
-    "appId": "com.modly.app",
-    "productName": "Modly",
+    "appId": "com.polypal.app",
+    "productName": "PolyPal",
     "directories": {
       "output": "dist"
     },
@@ -91,8 +91,8 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "lightningpixel",
-      "repo": "modly"
+      "owner": "slztt",
+      "repo": "polypal"
     },
     "nsis": {
       "oneClick": false,

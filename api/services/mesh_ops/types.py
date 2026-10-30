@@ -1,4 +1,4 @@
-"""Shared types for Modly mesh operations."""
+"""Shared types for PolyPal mesh operations."""
 
 from copy import deepcopy
 from dataclasses import dataclass, field

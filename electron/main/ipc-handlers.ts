@@ -137,9 +137,13 @@ function runExtensionSetup(
       env:   {
         ...process.env,
         PIP_CACHE_DIR:         pipCacheDir,
-        MODLY_TORCH_FLAVOR:    torchFlavor,
-        MODLY_TORCH_INDEX_URL: gpu.torchIndexUrl ?? '',
-        MODLY_TORCH_SPECS:     JSON.stringify(gpu.torchSpecs ?? []),
+        POLYPAL_TORCH_FLAVOR:    torchFlavor,
+        POLYPAL_TORCH_INDEX_URL: gpu.torchIndexUrl ?? '',
+        POLYPAL_TORCH_SPECS:     JSON.stringify(gpu.torchSpecs ?? []),
+        // Legacy names for extensions written against Modly's setup contract.
+        MODLY_TORCH_FLAVOR:      torchFlavor,
+        MODLY_TORCH_INDEX_URL:   gpu.torchIndexUrl ?? '',
+        MODLY_TORCH_SPECS:       JSON.stringify(gpu.torchSpecs ?? []),
       },
     })
 
@@ -227,11 +231,11 @@ export function setupIpcHandlers(pythonBridge: PythonBridge, getWindow: WindowGe
   const LOCKED_MODEL_FILES_ERROR = 'Model files are still locked after several attempts. Close any programs using the model and try again.'
   // Logging from renderer
   ipcMain.on('log:error', (_event, message: string) => logger.error(`[Renderer] ${message}`))
-  ipcMain.handle('log:getPath', () => join(app.getPath('userData'), 'logs', 'modly.log'))
+  ipcMain.handle('log:getPath', () => join(app.getPath('userData'), 'logs', 'polypal.log'))
   ipcMain.handle('log:readAll', async (_event, session?: string) => {
     const logsDir = join(app.getPath('userData'), 'logs')
     const dir = session ? join(logsDir, 'sessions', session) : logsDir
-    const files = ['modly.log', 'errors.log', 'runtime.log']
+    const files = ['polypal.log', 'errors.log', 'runtime.log']
     const result: Record<string, string> = {}
     for (const file of files) {
       try {
@@ -297,7 +301,7 @@ export function setupIpcHandlers(pythonBridge: PythonBridge, getWindow: WindowGe
   // Setup handlers — skipped in dev (uses .venv instead of python-embed)
   ipcMain.handle('setup:check', async () => {
     const userData = app.getPath('userData')
-    const defaultDataDir = join(app.getPath('documents'), 'Modly')
+    const defaultDataDir = join(app.getPath('documents'), 'PolyPal')
     return {
       needed: checkSetupNeeded(userData),
       defaultDataDir,
@@ -1339,9 +1343,9 @@ export function setupIpcHandlers(pythonBridge: PythonBridge, getWindow: WindowGe
     const restored = await restoreExtensionBackup(destinationDir, backupDir, logger)
     if (!restored.ok) {
       throw new Error(
-        `Extension update failed, and Modly could not restore the previous version `
+        `Extension update failed, and PolyPal could not restore the previous version `
         + `during ${restored.stage}: ${String(restored.error)}. `
-        + `Restart Modly to retry recovery. Original failure: ${String(originalFailure)}`,
+        + `Restart PolyPal to retry recovery. Original failure: ${String(originalFailure)}`,
       )
     }
 
@@ -1352,7 +1356,7 @@ export function setupIpcHandlers(pythonBridge: PythonBridge, getWindow: WindowGe
     )
     if (!stateCleared.ok) {
       throw new Error(
-        `Extension update failed and the previous version was restored, but Modly `
+        `Extension update failed and the previous version was restored, but PolyPal `
         + `could not clear recovery state during ${stateCleared.stage}: `
         + `${String(stateCleared.error)}. Original failure: ${String(originalFailure)}`,
       )
@@ -1368,7 +1372,7 @@ export function setupIpcHandlers(pythonBridge: PythonBridge, getWindow: WindowGe
     } catch (reloadError) {
       throw new Error(
         `Extension update failed and the previous version was restored on disk, `
-        + `but Modly could not reload it: ${String(reloadError)}. `
+        + `but PolyPal could not reload it: ${String(reloadError)}. `
         + `Original failure: ${String(originalFailure)}`,
       )
     }
@@ -1387,9 +1391,9 @@ export function setupIpcHandlers(pythonBridge: PythonBridge, getWindow: WindowGe
     const cleaned = await cleanupValidatedExtensionBackups(extensionsDir, extensionId, logger)
     if (!cleaned.ok) {
       throw new Error(
-        `Runtime registration succeeded, but Modly could not finish removing the previous `
+        `Runtime registration succeeded, but PolyPal could not finish removing the previous `
         + `extension backup during ${cleaned.stage}: ${String(cleaned.error)}. `
-        + `Restart Modly to retry the validated cleanup.`,
+        + `Restart PolyPal to retry the validated cleanup.`,
       )
     }
   }
@@ -1438,10 +1442,10 @@ export function setupIpcHandlers(pythonBridge: PythonBridge, getWindow: WindowGe
           )
           if (installInterrupted && activeExtensionInstalls.has(entry.name)) return null
 
-          // Detect local extensions: check for .modly-local sentinel
+          // Detect local extensions: check for .polypal-local sentinel
           let localSourcePath: string | undefined
           if (!isBuiltin) {
-            const sentinelPath = join(entryPath, '.modly-local')
+            const sentinelPath = join(entryPath, '.polypal-local')
             if (existsSync(sentinelPath)) {
               try {
                 localSourcePath = (await readFile(sentinelPath, 'utf-8')).trim()
@@ -1511,14 +1515,14 @@ export function setupIpcHandlers(pythonBridge: PythonBridge, getWindow: WindowGe
 
       // 2. Download tarball via GitHub API
       const tarballUrl = `https://api.github.com/repos/${owner}/${repo}/tarball/HEAD`
-      tarPath    = join(tmpDir, `modly-ext-${Date.now()}.tar.gz`)
-      extractDir = join(tmpDir, `modly-ext-extract-${Date.now()}`)
+      tarPath    = join(tmpDir, `polypal-ext-${Date.now()}.tar.gz`)
+      extractDir = join(tmpDir, `polypal-ext-extract-${Date.now()}`)
 
       const response = await axios.get(tarballUrl, {
         responseType: 'arraybuffer',
         headers: {
           'Accept':     'application/vnd.github.v3+json',
-          'User-Agent': 'Modly-App',
+          'User-Agent': 'PolyPal-App',
         },
         onDownloadProgress: (evt) => {
           const pct = evt.total ? Math.round((evt.loaded / evt.total) * 80) : 40
@@ -1730,9 +1734,9 @@ export function setupIpcHandlers(pythonBridge: PythonBridge, getWindow: WindowGe
           const restored = await restoreExtensionBackup(destDir, backupDir, logger)
           if (!restored.ok) {
             throw new Error(
-              `Extension setup failed, and Modly could not restore the previous version `
+              `Extension setup failed, and PolyPal could not restore the previous version `
               + `during ${restored.stage}: ${String(restored.error)}. `
-              + `Restart Modly to retry recovery. Original failure: ${String(setupErr)}`,
+              + `Restart PolyPal to retry recovery. Original failure: ${String(setupErr)}`,
             )
           }
           const cleared = await clearExtensionRegistrationTransaction(
@@ -1742,7 +1746,7 @@ export function setupIpcHandlers(pythonBridge: PythonBridge, getWindow: WindowGe
           )
           if (!cleared.ok) {
             throw new Error(
-              `Extension setup failed and the previous version was restored, but Modly `
+              `Extension setup failed and the previous version was restored, but PolyPal `
               + `could not clear recovery state during ${cleared.stage}: ${String(cleared.error)}.`,
             )
           }
@@ -1756,7 +1760,7 @@ export function setupIpcHandlers(pythonBridge: PythonBridge, getWindow: WindowGe
             )
             if (!cleared.ok) {
               throw new Error(
-                `Extension setup failed and its incomplete folder was removed, but Modly `
+                `Extension setup failed and its incomplete folder was removed, but PolyPal `
                 + `could not clear recovery state during ${cleared.stage}: ${String(cleared.error)}.`,
               )
             }
@@ -1800,9 +1804,9 @@ export function setupIpcHandlers(pythonBridge: PythonBridge, getWindow: WindowGe
           )
           if (!quarantined.ok) {
             throw new Error(
-              `Runtime registration failed, and Modly could not quarantine the extension `
+              `Runtime registration failed, and PolyPal could not quarantine the extension `
               + `during ${quarantined.stage}: ${String(quarantined.error)}. `
-              + `Restart Modly to retry recovery. Original failure: ${String(registrationError)}`,
+              + `Restart PolyPal to retry recovery. Original failure: ${String(registrationError)}`,
             )
           }
           if (!isProcess) {
@@ -1811,7 +1815,7 @@ export function setupIpcHandlers(pythonBridge: PythonBridge, getWindow: WindowGe
             } catch (runtimeQuarantineError) {
               throw new Error(
                 `Runtime registration failed and filesystem quarantine was preserved, `
-                + `but Modly could not evict partially registered model state: `
+                + `but PolyPal could not evict partially registered model state: `
                 + `${String(runtimeQuarantineError)}. `
                 + `Original failure: ${String(registrationError)}`,
               )
@@ -2055,7 +2059,7 @@ export function setupIpcHandlers(pythonBridge: PythonBridge, getWindow: WindowGe
 
               // The sentinel lives in the linked source folder. Runtime
               // registration is still pending externally until validation.
-              await writeFile(join(linkPath, '.modly-local'), localPath, 'utf-8')
+              await writeFile(join(linkPath, '.polypal-local'), localPath, 'utf-8')
             },
             validate: async (validationCapability) => {
               if (!isProcess) {

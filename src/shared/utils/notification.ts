@@ -16,10 +16,10 @@ async function notifyIfUnfocused(title: string, body: string): Promise<void> {
   }
 }
 
-export function showCompletionNotification(body: string, title = 'Modly'): Promise<void> {
+export function showCompletionNotification(body: string, title = 'PolyPal'): Promise<void> {
   return notifyIfUnfocused(title, body)
 }
 
-export function showErrorNotification(body: string, title = 'Modly'): Promise<void> {
+export function showErrorNotification(body: string, title = 'PolyPal'): Promise<void> {
   return notifyIfUnfocused(title, body)
 }

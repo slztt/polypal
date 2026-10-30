@@ -74,7 +74,7 @@ function FloatParam({ schema, value, onChange }: { schema: ParamSchema; value: a
           step={step}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="flex-1 accent-violet-500"
+          className="flex-1 accent-green-500"
         />
         <span className="text-xs tabular-nums text-zinc-300 w-10 text-right">
           {Number(value).toFixed(step < 1 ? 1 : 0)}

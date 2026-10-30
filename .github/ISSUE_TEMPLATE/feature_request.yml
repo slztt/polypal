@@ -1,5 +1,5 @@
 name: ✨ Feature request
-description: Suggest a new feature or improvement for Modly
+description: Suggest a new feature or improvement for PolyPal
 labels: [enhancement, "pending triage"]
 body:
   - type: markdown

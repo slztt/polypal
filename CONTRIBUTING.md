@@ -1,28 +1,17 @@
-# Contributing to Modly
+# Contributing to PolyPal
 
 Thanks for wanting to help out! You don't need write access to the repository to
 pick up a ticket, work on it, and ship a fix — here's how the flow works.
 
 ## Finding something to work on
 
-- Browse [open issues](https://github.com/lightningpixel/modly/issues) or the
-  [project board](https://github.com/users/lightningpixel/projects/1).
+- Browse [open issues](https://github.com/slztt/polypal/issues).
 - Issues labeled `good first issue` are a good place to start if you're new to
-  the codebase. See [`CLAUDE.md`](./CLAUDE.md) for an architecture overview.
+  the codebase. See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for an architecture overview.
 
 ## Claiming a ticket
 
-Comment **`/assign`** on the issue you want to work on. A bot will assign it to
-you automatically — no repo permissions required.
-
-- Only one person can be assigned to an issue at a time. If it's already
-  assigned, ask the assignee first or wait for them to release it.
-- No longer working on it? Comment **`/unassign`** to free it up for someone
-  else.
-
-This keeps the [project board](https://github.com/users/lightningpixel/projects/1)
-honest: an assigned issue moves to **In progress** automatically, so anyone
-looking at the board can see what's actively being worked on.
+Comment on the issue you want to work on so others know it's taken.
 
 ## Submitting your work
 

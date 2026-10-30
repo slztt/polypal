@@ -42,8 +42,8 @@ from services.model_sources import (
 # Global paths
 # ------------------------------------------------------------------ #
 
-_models_dir_raw    = os.environ.get("MODELS_DIR")    or str(Path.home() / ".modly" / "models")
-_workspace_dir_raw = os.environ.get("WORKSPACE_DIR") or str(Path.home() / ".modly" / "workspace")
+_models_dir_raw    = os.environ.get("MODELS_DIR")    or str(Path.home() / ".polypal" / "models")
+_workspace_dir_raw = os.environ.get("WORKSPACE_DIR") or str(Path.home() / ".polypal" / "workspace")
 MODELS_DIR    = Path(_models_dir_raw)
 WORKSPACE_DIR = Path(_workspace_dir_raw)
 
@@ -53,7 +53,7 @@ WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
 # extensions/ folder — in userData (passed by Electron via EXTENSIONS_DIR)
 _extensions_dir_raw = os.environ.get("EXTENSIONS_DIR", "")
 EXTENSIONS_DIR = Path(_extensions_dir_raw) if _extensions_dir_raw else None
-_REGISTRATION_PENDING_PREFIX = ".modly-registration-pending-"
+_REGISTRATION_PENDING_PREFIX = ".polypal-registration-pending-"
 _EXTENSION_ID = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 _REGISTRATION_PENDING_NAME = re.compile(
     rf"^{re.escape(_REGISTRATION_PENDING_PREFIX)}"
@@ -362,7 +362,7 @@ def _consume_registration_validation_capability(
                 "consumed": True,
             }
             temporary_path = root / (
-                f".modly-registration-capability-{secrets.token_hex(16)}"
+                f".polypal-registration-capability-{secrets.token_hex(16)}"
             )
             try:
                 flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
@@ -526,8 +526,8 @@ def _discover_extensions(
             # the UI attach this error to each expected model node even when
             # startup could not immediately restore a locked backup.
             install_interrupted = (
-                (ext_dir / ".modly-incomplete").exists()
-                or (ext_dir / ".modly-registration-pending").exists()
+                (ext_dir / ".polypal-incomplete").exists()
+                or (ext_dir / ".polypal-registration-pending").exists()
                 or (
                     _registration_pending(ext_id)
                     and not (
@@ -546,7 +546,7 @@ def _discover_extensions(
                 message = (
                     f"Extension '{ext_id}' has an incomplete installation "
                     "or interrupted runtime registration. "
-                    "Restart Modly to recover it, or click 'Repair' on the Models page."
+                    "Restart PolyPal to recover it, or click 'Repair' on the Models page."
                 )
                 print(f"[Registry] ERROR: {message}")
                 _record_discovery_error(
@@ -819,7 +819,7 @@ class GeneratorRegistry:
             ) and not downloaded:
                 raise RuntimeError(
                     "Model sources are incomplete. Download this node's shared and private weights "
-                    "from the Modly Models page before generation."
+                    "from the PolyPal Models page before generation."
                 )
             if not gen.is_loaded():
                 if not downloaded:

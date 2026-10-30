@@ -1,17 +1,17 @@
 <p align="center">
-  <img src="resources/icons/icon.png" width="96" alt="Modly logo" />
+  <img src="resources/icons/icon.png" width="96" alt="PolyPal logo" />
 </p>
 
-# Modly
+# PolyPal
 
 **Local, open source, AI-powered image-to-3D mesh generation.**
 Turn any photo into a 3D model using open source AI models running entirely on your GPU.
-Modly is a desktop application for Windows, Linux, and Apple Silicon macOS.
+PolyPal is a desktop application for Windows, Linux, and Apple Silicon macOS.
 
 > Created by [Lightning Pixel](https://github.com/lightningpixel)
 
 <p align="center">
-  <img src="docs/app-screenshot.png" alt="Modly screenshot" />
+  <img src="docs/app-screenshot.png" alt="PolyPal screenshot" />
 </p>
 
 ---
@@ -83,7 +83,7 @@ npm run build
 
 ## Extension system
 
-Modly supports external model and process extensions. Each extension is a GitHub repository containing a `manifest.json` plus the runtime entry files required by its type.
+PolyPal supports external model and process extensions. Each extension is a GitHub repository containing a `manifest.json` plus the runtime entry files required by its type.
 
 ### Official extensions
 
@@ -112,7 +112,7 @@ Modly supports external model and process extensions. Each extension is a GitHub
 ### Multiple Hugging Face repositories per model node
 
 A model node whose weights are split across repositories can declare
-`model_sources`. Modly validates every source, downloads them sequentially in
+`model_sources`. PolyPal validates every source, downloads them sequentially in
 one Models-page action, and considers the node installed only when every
 declared check exists.
 
@@ -281,7 +281,7 @@ Start with a basic workflow first. For example, on the "Workflows" tab, try: Ima
 
 Model extensions may also declare `scene` as a node input or output. A scene is
 a workspace directory containing `scene-manifest.json` with schema
-`modly.scene-manifest.v1`; it is not an arbitrary JSON file. Use the **Load
+`polypal.scene-manifest.v1`; it is not an arbitrary JSON file. Use the **Load
 Scene** workflow node to select and validate an existing scene directory.
 Scene-capable generators implement `generate_artifact(input_kind,
 artifact_path, ...)`; legacy image generators and `POST /generate/from-image`
@@ -292,24 +292,24 @@ For this first contract, `scene` is model-only and must be declared as the singl
 Model nodes may still accept multiple images and produce a scene.
 
 
-## Modly CLI
+## PolyPal CLI
 
-Agents and scripts can call a running Modly desktop app without using the UI via the stdlib-only CLI. The CLI is a thin helper over Modly's canonical automation concepts and keeps final machine-readable JSON on stdout:
+Agents and scripts can call a running PolyPal desktop app without using the UI via the stdlib-only CLI. The CLI is a thin helper over PolyPal's canonical automation concepts and keeps final machine-readable JSON on stdout:
 
 ```bash
-python tools/modly-cli/agent.py health
-python tools/modly-cli/agent.py model list
-python tools/modly-cli/agent.py workflow-run status <run_id>
-python tools/modly-cli/agent.py generate --image ./input.png --output ./export.glb
+python tools/polypal-cli/agent.py health
+python tools/polypal-cli/agent.py model list
+python tools/polypal-cli/agent.py workflow-run status <run_id>
+python tools/polypal-cli/agent.py generate --image ./input.png --output ./export.glb
 ```
 
 Canonical commands are `health`, `model`, `workflow-run`, `capability`, and `process-run`. The friendly `generate` command starts `POST /workflow-runs/from-image`, polls the returned run, exports the final mesh when requested, and includes recovery metadata such as `workflow-run status ...` and `workflow-run cancel ...` in the JSON response.
 
-Compatibility and helper surfaces are intentionally separated: `legacy` wraps old `/generate/*` job endpoints, `dev serve-api` / `dev ensure-server` start only the FastAPI backend and do not prove Electron/Desktop bridge readiness, and `experimental comfy-image` / `experimental generate-from-workflow` are external ComfyUI orchestration helpers rather than the canonical Modly agent contract. Hidden helper aliases such as `status`, `export`, and `batch` remain parseable for scripts, but they are not presented as canonical root commands.
+Compatibility and helper surfaces are intentionally separated: `legacy` wraps old `/generate/*` job endpoints, `dev serve-api` / `dev ensure-server` start only the FastAPI backend and do not prove Electron/Desktop bridge readiness, and `experimental comfy-image` / `experimental generate-from-workflow` are external ComfyUI orchestration helpers rather than the canonical PolyPal agent contract. Hidden helper aliases such as `status`, `export`, and `batch` remain parseable for scripts, but they are not presented as canonical root commands.
 
-`experimental generate-from-workflow --workflow <name> --output <path>` treats `--output` as the final artifact location. When the ComfyUI workflow produces a downloadable 3D asset, the CLI downloads it directly; image-only workflows remain a compatibility path through Modly image-to-3D generation.
+`experimental generate-from-workflow --workflow <name> --output <path>` treats `--output` as the final artifact location. When the ComfyUI workflow produces a downloadable 3D asset, the CLI downloads it directly; image-only workflows remain a compatibility path through PolyPal image-to-3D generation.
 
-See `tools/modly-cli/SKILL.md` for the agent workflow and output contract.
+See `tools/polypal-cli/SKILL.md` for the agent workflow and output contract.
 
 ---
 
@@ -322,7 +322,7 @@ Join the [Discord server](https://discord.gg/BvjDCvS3yr) to stay up to date with
 ## Sponsors
 
 <p align="center">
-  Thanks to our early sponsors for believing in Modly and helping make local AI 3D generation more accessible.
+  Thanks to our early sponsors for believing in PolyPal and helping make local AI 3D generation more accessible.
 </p>
 
 <p align="center">
@@ -353,6 +353,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 **If you fork this project and build your own app from it, you must credit the original project and its creator:**
 
-> Based on [Modly](https://github.com/lightningpixel/modly) by [Lightning Pixel](https://github.com/lightningpixel)
+> Based on [PolyPal](https://github.com/slztt/polypal) by [Lightning Pixel](https://github.com/lightningpixel)
 
 This is a requirement of the MIT license attribution clause. Please keep this credit visible in your app's UI or documentation.

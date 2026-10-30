@@ -13,9 +13,9 @@ module.exports = {
           500: '#111113',
         },
         accent: {
-          DEFAULT: '#7c3aed',
-          light:   '#a78bfa',
-          dark:    '#5b21b6',
+          DEFAULT: '#16a34a',
+          light:   '#4ade80',
+          dark:    '#15803d',
         }
       },
       fontFamily: {

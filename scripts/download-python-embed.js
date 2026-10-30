@@ -32,7 +32,7 @@ function download(url, dest) {
     console.log(`Downloading ${url} → ${dest}`)
     const file = fs.createWriteStream(dest)
     const request = (u) => {
-      https.get(u, { headers: { 'User-Agent': 'modly-build' } }, (res) => {
+      https.get(u, { headers: { 'User-Agent': 'polypal-build' } }, (res) => {
         if (res.statusCode === 301 || res.statusCode === 302) {
           request(res.headers.location)
           return

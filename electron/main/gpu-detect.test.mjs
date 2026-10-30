@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 function loadModule() {
-  const outfile = join(mkdtempSync(join(tmpdir(), 'modly-gpu-test-')), 'gpu-detect.cjs')
+  const outfile = join(mkdtempSync(join(tmpdir(), 'polypal-gpu-test-')), 'gpu-detect.cjs')
   const require = createRequire(import.meta.url)
   const result = buildSync({
     entryPoints: [resolve('electron/main/gpu-detect.ts')],
@@ -167,10 +167,10 @@ test('resolveRocmTorchSpec uses AMD\'s index with a device extra on Windows', ()
   ])
 })
 
-test('resolveRocmTorchSpec honours MODLY_ROCM_INDEX and MODLY_ROCM_TORCH_SPEC', () => {
+test('resolveRocmTorchSpec honours POLYPAL_ROCM_INDEX and POLYPAL_ROCM_TORCH_SPEC', () => {
   const rolledBack = mod.resolveRocmTorchSpec('linux', 'gfx1200', {
-    MODLY_ROCM_INDEX: 'https://download.pytorch.org/whl/rocm6.4',
-    MODLY_ROCM_TORCH_SPEC: 'torch==2.8.0 torchvision==0.23.0',
+    POLYPAL_ROCM_INDEX: 'https://download.pytorch.org/whl/rocm6.4',
+    POLYPAL_ROCM_TORCH_SPEC: 'torch==2.8.0 torchvision==0.23.0',
   })
   assert.equal(rolledBack.indexUrl, 'https://download.pytorch.org/whl/rocm6.4')
   assert.deepEqual(rolledBack.specs, ['torch==2.8.0', 'torchvision==0.23.0'])
@@ -199,7 +199,7 @@ test('detectGpuInfo keeps Apple Silicon on MPS', async () => {
 
 test('detectGpuInfo forced to rocm resolves wheels without probing hardware', async () => {
   const info = await mod.detectGpuInfo({
-    env: { MODLY_TORCH_FLAVOR: 'rocm', MODLY_ROCM_GFX: 'gfx1201' },
+    env: { POLYPAL_TORCH_FLAVOR: 'rocm', POLYPAL_ROCM_GFX: 'gfx1201' },
     platform: 'linux',
     arch: 'x64',
   })
@@ -214,7 +214,7 @@ test('detectGpuInfo forced to rocm resolves wheels without probing hardware', as
 
 test('detectGpuInfo forced to rocm overrides MPS on Apple Silicon', async () => {
   const info = await mod.detectGpuInfo({
-    env: { MODLY_TORCH_FLAVOR: 'rocm', MODLY_ROCM_GFX: 'gfx1200' },
+    env: { POLYPAL_TORCH_FLAVOR: 'rocm', POLYPAL_ROCM_GFX: 'gfx1200' },
     platform: 'darwin',
     arch: 'arm64',
   })
@@ -224,7 +224,7 @@ test('detectGpuInfo forced to rocm overrides MPS on Apple Silicon', async () => 
 test('detectGpuInfo forced to cuda overrides MPS on Apple Silicon', async () => {
   // The override has to beat every probe, the darwin/arm64 default included.
   const info = await mod.detectGpuInfo({
-    env: { MODLY_TORCH_FLAVOR: 'cuda' },
+    env: { POLYPAL_TORCH_FLAVOR: 'cuda' },
     platform: 'darwin',
     arch: 'arm64',
   })
@@ -233,7 +233,7 @@ test('detectGpuInfo forced to cuda overrides MPS on Apple Silicon', async () => 
 
 test('detectGpuInfo forced to cpu short-circuits everything', async () => {
   const info = await mod.detectGpuInfo({
-    env: { MODLY_TORCH_FLAVOR: 'cpu', MODLY_ROCM_GFX: 'gfx1200' },
+    env: { POLYPAL_TORCH_FLAVOR: 'cpu', POLYPAL_ROCM_GFX: 'gfx1200' },
     platform: 'linux',
     arch: 'x64',
   })
@@ -243,11 +243,11 @@ test('detectGpuInfo forced to cpu short-circuits everything', async () => {
 test('detectGpuInfo falls back to CPU when forced to rocm on Windows with no target', async () => {
   const logs = []
   const info = await mod.detectGpuInfo({
-    env: { MODLY_TORCH_FLAVOR: 'rocm' },
+    env: { POLYPAL_TORCH_FLAVOR: 'rocm' },
     platform: 'win32',
     arch: 'x64',
     onLog: (line) => logs.push(line),
   })
   assert.equal(info.accelerator, 'cpu')
-  assert.ok(logs.some((l) => l.includes('MODLY_ROCM_GFX')))
+  assert.ok(logs.some((l) => l.includes('POLYPAL_ROCM_GFX')))
 })

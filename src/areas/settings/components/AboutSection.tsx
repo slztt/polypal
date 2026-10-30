@@ -13,23 +13,23 @@ export function AboutSection(): JSX.Element {
       <div className="grid grid-cols-2 gap-4">
 
         <Card>
-          <Row label="Modly" description="Local 3D mesh generation app.">
+          <Row label="PolyPal" description="Local AI 3D generation, editing and diagnostics.">
             <span className="text-xs font-mono text-zinc-400">{version ? `v${version}` : '—'}</span>
           </Row>
-          <Row label="Documentation" description="Guides and API reference.">
-            <LinkButton label="Open" href="https://modly3d.app" />
+          <Row label="Documentation" description="Guides and architecture overview.">
+            <LinkButton label="Open" href="https://github.com/slztt/polypal#readme" />
           </Row>
           <Row label="GitHub" description="Source code and issues.">
-            <LinkButton label="Open" href="https://github.com/lightningpixel/modly" />
+            <LinkButton label="Open" href="https://github.com/slztt/polypal" />
           </Row>
         </Card>
 
         <Card>
-          <Row label="Discord" description="Community support.">
-            <LinkButton label="Join" href="https://discord.gg/FjzjRgweVk" />
+          <Row label="Based on Modly" description="By Lightning Pixel — credited per the MIT attribution clause.">
+            <LinkButton label="Open" href="https://github.com/lightningpixel/modly" />
           </Row>
           <Row label="Open-source licenses" description="Third-party licenses used in this app.">
-            <LinkButton label="View" href="https://github.com/lightningpixel/modly/blob/main/LICENSE" />
+            <LinkButton label="View" href="https://github.com/slztt/polypal/blob/main/LICENSE" />
           </Row>
         </Card>
 

@@ -158,7 +158,7 @@ def export_for_slicer(fmt: str, token: str, filename: str):
 
     mesh = _to_single_mesh(trimesh.load(str(full_path)))
     # glTF/GLB is Y-up; OrcaSlicer's world is Z-up. Rotate +90° about X so the
-    # model imports standing upright instead of on its side. (Modly's own viewer
+    # model imports standing upright instead of on its side. (PolyPal's own viewer
     # rests generated meshes on the Y=0 plane, confirming Y is the up axis.)
     # STL/OBJ/PLY sources are already Z-up, so rotating them would do the very
     # thing this corrects — lay an upright model on its side.

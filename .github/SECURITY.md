@@ -2,11 +2,11 @@
 
 ## Scope
 
-Modly is designed to run locally. It is an Electron desktop application that
+PolyPal is designed to run locally. It is an Electron desktop application that
 spawns a Python backend bound to `127.0.0.1`, and it runs AI models on the
 user's own machine. Our threat model assumes:
 
-- The user installed Modly through a supported channel: the installer published
+- The user installed PolyPal through a supported channel: the installer published
   on the project's GitHub releases page, or a manual install following the
   README.
 - The user has not installed untrusted extensions. Extensions are arbitrary
@@ -17,10 +17,10 @@ user's own machine. Our threat model assumes:
 - **Any web page the user has open in a browser is an untrusted caller of the
   local API.** The backend listens on loopback, but a page in the user's browser
   is on the same machine — it must not be able to read, write, or trigger
-  anything through Modly.
-- Model weights are downloaded from the repositories Modly ships or from
+  anything through PolyPal.
+- Model weights are downloaded from the repositories PolyPal ships or from
   repositories the user explicitly chooses.
-- Python dependencies are at the versions Modly installs during first-run setup.
+- Python dependencies are at the versions PolyPal installs during first-run setup.
 
 A report is in scope only if it affects a user operating within this threat
 model.
@@ -28,14 +28,14 @@ model.
 ## What We Consider a Vulnerability
 
 We want to hear about issues where a reasonable user — someone who does not
-install untrusted extensions — can be harmed by Modly itself.
+install untrusted extensions — can be harmed by PolyPal itself.
 
 The clearest examples:
 
 - A **workflow file** that such a user might plausibly open and run, using only
   built-in nodes and installed extensions, that leads to code execution,
   file access outside the expected directories, or data exfiltration.
-- A **web page** that, simply by being open while Modly is running, can reach
+- A **web page** that, simply by being open while PolyPal is running, can reach
   the local API to read files, write files, or start work on the user's machine.
 - An **extension manifest** that escapes its own directory, or that causes code
   outside the extension to be loaded into a privileged context.
@@ -47,7 +47,7 @@ The clearest examples:
   the preload bridge.
 
 When submitting a report, please include a clear description of why this is a
-problem for a typical local Modly user. Reports without this context are
+problem for a typical local PolyPal user. Reports without this context are
 difficult to act on.
 
 ## What We Do Not Consider a Security Vulnerability
@@ -56,7 +56,7 @@ Please report the following through regular GitHub issues instead. Filing them
 as security reports will likely cause them to be deprioritized or closed.
 
 - **Issues that require the user to deliberately expose the backend to the
-  network.** Modly binds to `127.0.0.1` and offers no option to do otherwise. If
+  network.** PolyPal binds to `127.0.0.1` and offers no option to do otherwise. If
   you put a reverse proxy or a port forward in front of it, you have chosen to
   expose it and are responsible for securing that deployment. Note that this
   exclusion does *not* cover attacks from a web page on the user's own machine —
@@ -65,7 +65,7 @@ as security reports will likely cause them to be deprioritized or closed.
   Extensions are third-party code. Report those to the maintainer of the
   extension.
 - **Malicious content inside model weights the user chooses to download.**
-  Modly fetches weights from the repository named by an extension or by the
+  PolyPal fetches weights from the repository named by an extension or by the
   user. Report those to the repository host; if an extension points at a
   malicious repository, report it to that extension's maintainer.
 - **Vulnerabilities that depend on dependency versions we neither ship nor
@@ -77,21 +77,21 @@ as security reports will likely cause them to be deprioritized or closed.
 
 ## Supported Versions
 
-Modly is pre-1.0 (currently 0.x). Security fixes ship in the most recent
+PolyPal is pre-1.0 (currently 0.x). Security fixes ship in the most recent
 release only. Please confirm the issue on the latest version before reporting.
 
 ## Reporting
 
 If you believe you have found an issue that falls within the scope above, please
 report it privately via GitHub's
-[Report a vulnerability](https://github.com/lightningpixel/modly/security/advisories/new)
+[Report a vulnerability](https://github.com/slztt/polypal/security/advisories/new)
 feature rather than opening a public issue, discussion, or Discord message.
 
 Please include:
 
 - A description of the vulnerability and the affected component.
 - Reproduction steps, ideally with a minimal workflow file or proof of concept.
-- The Modly version, install method, and operating system.
+- The PolyPal version, install method, and operating system.
 - An explanation of how this affects a typical local user as described in the
   threat model.
 

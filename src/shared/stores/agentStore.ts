@@ -125,7 +125,7 @@ export const useAgentStore = create<AgentSettings>()(
       setDefaultThinking: (mode)           => set({ defaultThinking: mode }),
     }),
     {
-      name: 'modly-agent-settings',
+      name: 'polypal-agent-settings',
       version: 3,
       storage: createJSONStorage(() => secureAgentStorage),
       // v0 stored { ollamaUrl, defaultModel } — drop them, keep only thinking.

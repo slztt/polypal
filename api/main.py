@@ -1,5 +1,5 @@
 """
-Modly FastAPI backend.
+PolyPal FastAPI backend.
 Runs locally within the Electron app to provide AI inference endpoints.
 """
 import logging
@@ -35,7 +35,7 @@ logging.getLogger("uvicorn.access").addFilter(_StatusFilter())
 
 
 app = FastAPI(
-    title="Modly API",
+    title="PolyPal API",
     version="0.4.3",
     lifespan=lifespan,
 )

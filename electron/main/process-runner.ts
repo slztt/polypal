@@ -221,12 +221,16 @@ export class PythonProcessRunner implements IProcessRunner {
           // crash under legacy Windows codepages (cp1252/cp932).
           PYTHONUTF8: '1',
           // Built-in process nodes may import shared services from the backend.
-          MODLY_API_DIR: app.isPackaged
+          POLYPAL_API_DIR: app.isPackaged
             ? join(process.resourcesPath, 'api')
             : join(app.getAppPath(), 'api'),
           // Electron is also the packaged Node runtime. meshopt_runner.cjs uses
           // ELECTRON_RUN_AS_NODE when it launches this executable.
-          MODLY_NODE_EXECUTABLE: process.execPath,
+          POLYPAL_NODE_EXECUTABLE: process.execPath,
+          // Legacy alias for process extensions written against Modly.
+          MODLY_API_DIR: app.isPackaged
+            ? join(process.resourcesPath, 'api')
+            : join(app.getAppPath(), 'api'),
           EXTENSION_DIR: this.extDir,
           WORKSPACE_DIR: this.workspaceDir,
           TEMP_DIR: this.tempDir,

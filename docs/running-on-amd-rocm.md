@@ -1,7 +1,7 @@
-# Running Modly on an AMD GPU (ROCm)
+# Running PolyPal on an AMD GPU (ROCm)
 
-Modly's default GPU path is NVIDIA/CUDA (plus Metal/MPS on Apple Silicon). This page
-covers the AMD path: how Modly detects a Radeon card, which PyTorch wheels it steers
+PolyPal's default GPU path is NVIDIA/CUDA (plus Metal/MPS on Apple Silicon). This page
+covers the AMD path: how PolyPal detects a Radeon card, which PyTorch wheels it steers
 extensions to, and what to do when the automatic choice is wrong.
 
 Nothing here needs a manual setup: install the app, install an extension, and the AMD
@@ -27,7 +27,7 @@ sudo usermod -aG render "$USER"
 ```
 
 Integrated (APU) graphics are not mapped by the Windows detection table. They work on
-Linux whenever the kernel publishes a compute target, but they are not a target Modly
+Linux whenever the kernel publishes a compute target, but they are not a target PolyPal
 tests against.
 
 ---
@@ -37,7 +37,7 @@ tests against.
 Detection lives in `electron/main/gpu-detect.ts` and runs before an extension's
 `setup.py`, in this order:
 
-1. `MODLY_TORCH_FLAVOR` (`cuda` / `rocm` / `cpu`) — an explicit override wins over everything.
+1. `POLYPAL_TORCH_FLAVOR` (`cuda` / `rocm` / `cpu`) — an explicit override wins over everything.
 2. Apple Silicon → MPS.
 3. `nvidia-smi` → CUDA. **NVIDIA keeps priority**: on a machine with both vendors,
    nothing about the existing CUDA behaviour changes.
@@ -77,8 +77,8 @@ are not part of AMD's supported matrix.
 
 ## 3. Which wheels get installed
 
-Modly does not install PyTorch itself — each extension's `setup.py` does, from an index
-it hardcodes. On an AMD machine Modly corrects that choice two ways:
+PolyPal does not install PyTorch itself — each extension's `setup.py` does, from an index
+it hardcodes. On an AMD machine PolyPal corrects that choice two ways:
 
 - It passes `torch_flavor: "rocm"` in the setup arguments. Extensions that know about
   AMD (the official `hunyuan3d-mini` one does) branch on it themselves.
@@ -109,7 +109,7 @@ what actually landed in its venv:
 
 ```bash
 # Linux; adjust to your extensions directory
-EXT=~/Documents/Modly/extensions/hunyuan3d-mini
+EXT=~/Documents/PolyPal/extensions/hunyuan3d-mini
 "$EXT/venv/bin/python" -c "import torch; print(torch.__version__, '| hip', torch.version.hip, '| avail', torch.cuda.is_available(), '|', torch.cuda.get_device_name(0))"
 ```
 
@@ -128,14 +128,14 @@ Then confirm real VRAM is usable, not just that the device opens:
 ## 5. Escape hatches
 
 All of these are environment variables read at detection time — set them before
-launching Modly.
+launching PolyPal.
 
 | Variable | Effect |
 |---|---|
-| `MODLY_TORCH_FLAVOR` | `cuda` / `rocm` / `cpu`. Forces the path, skipping detection entirely. |
-| `MODLY_ROCM_GFX` | Forces the compute target (e.g. `gfx1201`). Needed for an AMD card the Windows table doesn't map. |
-| `MODLY_ROCM_INDEX` | Overrides the pip index, e.g. `https://download.pytorch.org/whl/rocm6.4` to fall back to torch 2.8/2.9. |
-| `MODLY_ROCM_TORCH_SPEC` | Overrides the requirements entirely, space-separated: `"torch==2.9.1 torchvision==0.24.1"`. |
+| `POLYPAL_TORCH_FLAVOR` | `cuda` / `rocm` / `cpu`. Forces the path, skipping detection entirely. |
+| `POLYPAL_ROCM_GFX` | Forces the compute target (e.g. `gfx1201`). Needed for an AMD card the Windows table doesn't map. |
+| `POLYPAL_ROCM_INDEX` | Overrides the pip index, e.g. `https://download.pytorch.org/whl/rocm6.4` to fall back to torch 2.8/2.9. |
+| `POLYPAL_ROCM_TORCH_SPEC` | Overrides the requirements entirely, space-separated: `"torch==2.9.1 torchvision==0.24.1"`. |
 | `HSA_OVERRIDE_GFX_VERSION` | ROCm's own override, for cards without native kernels (e.g. `10.3.0` on an unsupported RDNA 2 part). Not needed on RDNA 3/4. |
 
 After changing any of these, run **Repair** on the extension so its venv is rebuilt.
@@ -146,12 +146,12 @@ After changing any of these, run **Repair** on the extension so its venv is rebu
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Logs say `accelerator=cpu` on an AMD machine | `/dev/kfd` missing or unreadable (Linux), or an unmapped PCI id (Windows) | Check `ls -l /dev/kfd`; on Windows set `MODLY_ROCM_GFX` |
+| Logs say `accelerator=cpu` on an AMD machine | `/dev/kfd` missing or unreadable (Linux), or an unmapped PCI id (Windows) | Check `ls -l /dev/kfd`; on Windows set `POLYPAL_ROCM_GFX` |
 | `torch.__version__` ends in `+cu118` | Extension venv predates AMD support | Run **Repair** on the extension |
 | `torch.cuda.is_available()` is `False` with a ROCm build | Device nodes not accessible from the process | Add your user to the `render` group, log back in |
 | `HIP error: invalid device function` | Wheel has no kernels for your card | Set `HSA_OVERRIDE_GFX_VERSION` to a supported nearby target |
-| Extension imports fail after install (`diffusers`/`transformers`) | The ROCm index only carries recent torch (2.11+), newer than some extensions expect | `MODLY_ROCM_INDEX=https://download.pytorch.org/whl/rocm6.4`, then **Repair** |
-| Allocations above ~8 GB segfault on a 16 GB RX 9060 XT | [ROCm issue #6295](https://github.com/ROCm/ROCm/issues/6295) — did not reproduce on torch 2.13.0+rocm7.2 (see below) | If you hit it, pin an older stack via `MODLY_ROCM_INDEX` |
+| Extension imports fail after install (`diffusers`/`transformers`) | The ROCm index only carries recent torch (2.11+), newer than some extensions expect | `POLYPAL_ROCM_INDEX=https://download.pytorch.org/whl/rocm6.4`, then **Repair** |
+| Allocations above ~8 GB segfault on a 16 GB RX 9060 XT | [ROCm issue #6295](https://github.com/ROCm/ROCm/issues/6295) — did not reproduce on torch 2.13.0+rocm7.2 (see below) | If you hit it, pin an older stack via `POLYPAL_ROCM_INDEX` |
 
 ---
 
@@ -181,12 +181,12 @@ During generation PyTorch emits:
 
 Generation works without it — `scaled_dot_product_attention` falls back to a
 slower path. Setting `TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL=1` before launching
-Modly enables the memory-efficient kernels, at the cost of running code AMD still
-labels experimental on RDNA 3/4. Modly does not set it for you.
+PolyPal enables the memory-efficient kernels, at the cost of running code AMD still
+labels experimental on RDNA 3/4. PolyPal does not set it for you.
 
 Limitations:
 
-- **Windows is untested** by the Modly maintainers. The wheel URLs and the `cp311`
+- **Windows is untested** by the PolyPal maintainers. The wheel URLs and the `cp311`
   availability were verified, but no end-to-end run has been done on that path.
 - **Texture generation** relies on optional native extensions (`texture_baker`,
   `uv_unwrapper`) whose CUDA kernels have a HIP path but are not built as part of the

@@ -8,7 +8,7 @@ import { join, resolve } from 'node:path'
 
 // paramPicker.ts only type-imports from electron.d, so esbuild erases it.
 function loadModule() {
-  const outfile = join(mkdtempSync(join(tmpdir(), 'modly-parampicker-test-')), 'paramPicker.cjs')
+  const outfile = join(mkdtempSync(join(tmpdir(), 'polypal-parampicker-test-')), 'paramPicker.cjs')
   const require = createRequire(import.meta.url)
   const result = buildSync({
     entryPoints: [resolve('src/shared/utils/paramPicker.ts')],

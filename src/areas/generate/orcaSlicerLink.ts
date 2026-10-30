@@ -65,7 +65,7 @@ export function canOpenInOrcaSlicer(outputUrl: string | undefined): boolean {
 /**
  * Build the `orcaslicer://open?file=...` deeplink for a generated mesh.
  *
- * @param apiUrl    Modly backend origin, e.g. `http://localhost:8765`
+ * @param apiUrl    PolyPal backend origin, e.g. `http://localhost:8765`
  * @param outputUrl workspace or serve-file URL of the mesh
  * @throws if `outputUrl` is not sliceable — guard with {@link canOpenInOrcaSlicer}
  */

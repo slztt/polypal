@@ -10,7 +10,7 @@ import { join, resolve } from 'node:path'
 // workflowsStore.test.mjs. Only fetchModels() is exercised, so the React hook
 // at the bottom of the module is never rendered.
 function loadStore() {
-  const outfile = join(mkdtempSync(join(tmpdir(), 'modly-llmstore-test-')), 'llmModelsStore.cjs')
+  const outfile = join(mkdtempSync(join(tmpdir(), 'polypal-llmstore-test-')), 'llmModelsStore.cjs')
   const require = createRequire(import.meta.url)
   const result = buildSync({
     entryPoints: [resolve('src/shared/stores/llmModelsStore.ts')],

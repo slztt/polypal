@@ -51,7 +51,7 @@ export function setupDom() {
 export function loadModule(entryPath) {
   // Inside the project, not the system temp dir: the bundle keeps `react` as a
   // bare require, and that only resolves from a path under this node_modules.
-  const cacheRoot = resolve('node_modules/.cache/modly-react-tests')
+  const cacheRoot = resolve('node_modules/.cache/polypal-react-tests')
   mkdirSync(cacheRoot, { recursive: true })
   const outfile = join(mkdtempSync(join(cacheRoot, 'm-')), 'module.cjs')
   const result = buildSync({
