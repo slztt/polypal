@@ -10,6 +10,7 @@ import WorkflowPanel from './components/WorkflowPanel'
 import MeshEditorPanel from '@areas/editor/MeshEditorPanel'
 import { useCurrentMesh, useMeshStats } from '@areas/editor/useMeshEditing'
 import { meshPathFromUrl } from './meshPath'
+import { errorMessage } from '@shared/api/polypalApi'
 import QueueIndicator from './components/QueueIndicator'
 import { getDefaultAssetLibraryService } from './assetLibraryService'
 import { buildOrcaSlicerDeepLink, canOpenInOrcaSlicer } from './orcaSlicerLink'
@@ -828,6 +829,8 @@ export default function GeneratePage(): JSX.Element {
       }
       setCurrentJob(job)
       pushMeshUrl(url, 'Imported')
+    } catch (err) {
+      showError(errorMessage(err))
     } finally {
       setImporting(false)
     }
@@ -907,7 +910,7 @@ export default function GeneratePage(): JSX.Element {
       pushMeshUrl(url, `Smooth ×${iterations}`)
       setOpenPanel(null)
     } catch (err) {
-      showError(err instanceof Error ? err.message : String(err))
+      showError(errorMessage(err))
     } finally {
       setSmoothing(false)
     }
@@ -923,7 +926,7 @@ export default function GeneratePage(): JSX.Element {
       pushMeshUrl(url, `Decimate to ${targetFaces.toLocaleString()}`)
       setOpenPanel(null)
     } catch (err) {
-      showError(err instanceof Error ? err.message : String(err))
+      showError(errorMessage(err))
     } finally {
       setDecimating(false)
     }

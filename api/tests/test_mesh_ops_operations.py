@@ -321,3 +321,39 @@ class MeshOpOperationRegressionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DecimateFallbackTests(unittest.TestCase):
+    def _context(self, directory: Path) -> MeshOpContext:
+        return MeshOpContext(workspace_dir=directory, temp_dir=directory, output_path=directory / "out.glb")
+
+    def test_falls_back_to_quadric_edge_collapse_when_meshopt_fails(self) -> None:
+        from services.mesh_ops.types import MeshOpUnavailableError
+
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            mesh_set = _FakeMeshSet()
+            geometry = _FakeGeometry(faces=[1] * 7)
+            with patch.object(operations, "_decimate_with_meshoptimizer",
+                              side_effect=MeshOpUnavailableError("no node")), \
+                 patch.object(operations, "_mesh_libraries",
+                              return_value=(SimpleNamespace(MeshSet=lambda: mesh_set), SimpleNamespace(Scene=_FakeScene))), \
+                 patch.object(operations, "_load_single_mesh", return_value=geometry), \
+                 patch.object(operations, "_raw_geometry", return_value=geometry):
+                result = operations.decimate_mesh(directory / "in.glb", {"target_faces": 500}, self._context(directory))
+        self.assertEqual(result.details["backend"], "pymeshlab")
+        call = next(c for c in mesh_set.calls if c[0] == "meshing_decimation_quadric_edge_collapse")
+        self.assertEqual(call[2]["targetfacenum"], 500)
+
+    def test_reports_both_causes_when_the_fallback_also_fails(self) -> None:
+        from services.mesh_ops.types import MeshOpExecutionError
+
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            with patch.object(operations, "_decimate_with_meshoptimizer",
+                              side_effect=MeshOpExecutionError("runner crashed")), \
+                 patch.object(operations, "_decimate_with_pymeshlab", side_effect=RuntimeError("no plugin")):
+                with self.assertRaises(MeshOpExecutionError) as ctx:
+                    operations.decimate_mesh(directory / "in.glb", {"target_faces": 500}, self._context(directory))
+        self.assertIn("runner crashed", str(ctx.exception))
+        self.assertIn("no plugin", str(ctx.exception))

@@ -332,6 +332,67 @@ def decimate_mesh(
     params: Mapping[str, Any],
     context: MeshOpContext,
 ) -> MeshOpResult:
+    """Decimate with meshoptimizer, falling back to pymeshlab.
+
+    meshoptimizer runs in a Node runtime (Electron itself in packaged
+    builds). If that runtime or its dependencies fail on a machine, quadric
+    edge collapse via pymeshlab — already required by the backend — does the
+    job instead of the whole operation failing.
+    """
+    try:
+        return _decimate_with_meshoptimizer(input_path, params, context)
+    except (MeshOpUnavailableError, MeshOpExecutionError) as primary:
+        context.log(f"meshoptimizer failed ({primary}); using quadric edge collapse instead")
+        try:
+            return _decimate_with_pymeshlab(input_path, params, context)
+        except Exception as fallback:  # noqa: BLE001 — report both causes
+            raise MeshOpExecutionError(
+                f"Decimation failed. meshoptimizer: {primary}. Fallback: {fallback}"
+            ) from fallback
+
+
+def _decimate_with_pymeshlab(
+    input_path: Path,
+    params: Mapping[str, Any],
+    context: MeshOpContext,
+) -> MeshOpResult:
+    pymeshlab, trimesh = _mesh_libraries("mesh-optimizer")
+    target_faces = int(params.get("target_faces", 10000))
+    output_path = _output_path(context, "mesh-optimizer")
+
+    context.progress(10, "Loading mesh…")
+    geometry = _load_single_mesh(input_path, trimesh)
+    temporary_dir = tempfile.mkdtemp()
+    try:
+        ply_input = os.path.join(temporary_dir, "input.ply")
+        ply_output = os.path.join(temporary_dir, "output.ply")
+        geometry.export(ply_input)
+        mesh_set = pymeshlab.MeshSet()
+        mesh_set.load_new_mesh(ply_input)
+        context.progress(40, f"Decimating to {target_faces:,} faces…")
+        mesh_set.meshing_decimation_quadric_edge_collapse(
+            targetfacenum=target_faces,
+            preservenormal=True,
+            preserveboundary=True,
+            optimalplacement=True,
+        )
+        context.progress(85, "Exporting…")
+        mesh_set.save_current_mesh(ply_output)
+        result = _raw_geometry(ply_output, trimesh)
+    finally:
+        shutil.rmtree(temporary_dir, ignore_errors=True)
+
+    result.export(str(output_path))
+    face_count = _face_count(result, trimesh)
+    context.progress(100, "Done")
+    return MeshOpResult(file_path=output_path, details={"face_count": face_count, "backend": "pymeshlab"})
+
+
+def _decimate_with_meshoptimizer(
+    input_path: Path,
+    params: Mapping[str, Any],
+    context: MeshOpContext,
+) -> MeshOpResult:
     """Run the existing glTF Transform + meshoptimizer implementation."""
     executable, electron_runtime = _node_executable()
     dependency_dir = _meshopt_dependency_dir()

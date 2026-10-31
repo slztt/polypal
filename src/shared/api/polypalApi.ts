@@ -279,6 +279,10 @@ export const copilotApi = {
 
 /** User-facing message for any thrown value. */
 export function errorMessage(err: unknown): string {
+  // axios errors carry the backend's explanation in response.data.detail;
+  // its own message ("Request failed with status code 503") says nothing.
+  const detail = (err as { response?: { data?: { detail?: unknown } } } | null)?.response?.data?.detail
+  if (typeof detail === 'string' && detail) return detail
   if (err instanceof Error) return err.message.includes('Failed to fetch') ? 'Cannot reach the PolyPal API. Is the backend running?' : err.message
   return String(err)
 }
