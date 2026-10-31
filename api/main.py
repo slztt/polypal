@@ -12,7 +12,7 @@ from fastapi import HTTPException
 from services.stdio_utf8 import ensure_utf8_stdio
 ensure_utf8_stdio()  # must run before any print/logging hits the pipe
 
-from routers import generation, model, optimize, status, settings, extensions, export, workflow_runs, agent, llm, edit, gpu, library, skills, texture
+from routers import generation, model, optimize, status, settings, extensions, export, workflow_runs, agent, llm, edit, gpu, library, skills, texture, images
 from services.app_info import APP_NAME, APP_VERSION
 
 
@@ -71,6 +71,7 @@ app.include_router(gpu.router)
 app.include_router(library.router)
 app.include_router(skills.router)
 app.include_router(texture.router)
+app.include_router(images.router)
 
 # Serve generated files from workspace — dynamic so path changes take effect immediately
 @app.get("/workspace/{full_path:path}")

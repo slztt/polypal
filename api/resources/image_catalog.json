@@ -1,0 +1,58 @@
+{
+  "_note": "Image models for the stable-diffusion.cpp engine. 'files' are downloaded from Hugging Face into <agent dir>/imagegen/models/<id>/. 'role' maps a file to the engine flag that loads it.",
+  "default": "sdxl-turbo",
+  "models": [
+    {
+      "id": "sd-turbo",
+      "name": "SD Turbo",
+      "description": "Fastest and lightest. Good for quick ideas and low-memory GPUs.",
+      "tags": ["fast", "low-vram"],
+      "vram_gb": 3,
+      "size_gb": 5.2,
+      "resolution": 512,
+      "steps": 4,
+      "cfg": 1.0,
+      "sampler": "euler_a",
+      "references": "init",
+      "files": [
+        {"role": "model", "repo": "stabilityai/sd-turbo", "file": "sd_turbo.safetensors"}
+      ]
+    },
+    {
+      "id": "sdxl-turbo",
+      "name": "SDXL Turbo",
+      "description": "Sharper, more detailed pictures in a few steps. Recommended.",
+      "tags": ["default", "fast"],
+      "vram_gb": 8,
+      "size_gb": 6.9,
+      "resolution": 512,
+      "steps": 4,
+      "cfg": 1.0,
+      "sampler": "euler_a",
+      "references": "init",
+      "files": [
+        {"role": "model", "repo": "stabilityai/sdxl-turbo", "file": "sd_xl_turbo_1.0_fp16.safetensors"}
+      ]
+    },
+    {
+      "id": "flux-kontext",
+      "name": "FLUX.1 Kontext (references)",
+      "description": "Best quality, and follows up to five reference pictures. Needs a strong GPU.",
+      "tags": ["references", "quality"],
+      "vram_gb": 12,
+      "size_gb": 12.3,
+      "resolution": 1024,
+      "steps": 20,
+      "cfg": 1.0,
+      "guidance": 2.5,
+      "sampler": "euler",
+      "references": "multi",
+      "files": [
+        {"role": "diffusion-model", "repo": "QuantStack/FLUX.1-Kontext-dev-GGUF", "file": "flux1-kontext-dev-Q4_K_M.gguf"},
+        {"role": "vae", "repo": "black-forest-labs/FLUX.1-schnell", "file": "ae.safetensors"},
+        {"role": "clip_l", "repo": "comfyanonymous/flux_text_encoders", "file": "clip_l.safetensors"},
+        {"role": "t5xxl", "repo": "comfyanonymous/flux_text_encoders", "file": "t5xxl_fp8_e4m3fn.safetensors"}
+      ]
+    }
+  ]
+}
