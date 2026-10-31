@@ -236,6 +236,10 @@ def main() -> None:
         try:
             # ---- load ------------------------------------------------
             if action == "load":
+                # Newer diffusers no longer imports custom pipeline modules on
+                # demand; pre-import the extension's own ones (see module doc).
+                from services.diffusers_compat import preimport_pipeline_modules
+                preimport_pipeline_modules([model_dir, *gen.shared_model_dirs.values()], EXT_DIR)
                 gen.load()
                 send({"type": "loaded"})
 
