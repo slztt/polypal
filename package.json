@@ -1,7 +1,7 @@
 {
   "name": "polypal",
   "version": "0.5.0",
-  "description": "PolyPal — local AI-powered 3D mesh generation, editing and diagnostics",
+  "description": "PolyPal \u2014 local AI-powered 3D mesh generation, editing and diagnostics",
   "main": "./out/main/index.js",
   "author": "PolyPal",
   "private": true,
@@ -96,7 +96,14 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "PolyPal",
+      "runAfterFinish": true,
+      "installerIcon": "resources/icons/icon.ico",
+      "uninstallerIcon": "resources/icons/icon.ico",
+      "uninstallDisplayName": "PolyPal"
     },
     "win": {
       "target": "nsis",
@@ -130,7 +137,12 @@
           "from": "resources/python-embed",
           "to": "python-embed"
         }
-      ]
-    }
-  }
+      ],
+      "category": "Graphics",
+      "synopsis": "Local AI 3D generation, editing and diagnostics",
+      "syncDesktopName": true
+    },
+    "copyright": "Copyright \u00a9 2026 PolyPal contributors. Based on Modly by Lightning Pixel."
+  },
+  "desktopName": "polypal.desktop"
 }

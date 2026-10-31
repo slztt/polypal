@@ -37,6 +37,11 @@ See [ROADMAP.md](ROADMAP.md) for the full list and [ARCHITECTURE.md](ARCHITECTUR
 
 Head to the [Releases](../../releases/latest) page to download the latest installer for Windows, Linux, or Apple Silicon macOS.
 
+Every push to `main` also builds fresh installers: open **Actions → Installers**, pick the latest run and download
+`PolyPal-windows` (`.exe` installer), `PolyPal-macos-arm64` (`.dmg`) or `PolyPal-linux` (`.AppImage`) from **Artifacts**.
+The installers are not code-signed yet, so Windows SmartScreen shows *More info → Run anyway* and macOS needs
+right-click → **Open** the first time.
+
 Alternatively, you can clone the repository and run the app directly without installing:
 
 ```bash
