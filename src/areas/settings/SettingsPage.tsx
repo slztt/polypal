@@ -6,10 +6,31 @@ import { IntegrationsSection } from './components/IntegrationsSection'
 import { AgentSection } from './components/AgentSection'
 import { ApplicationSection } from './components/ApplicationSection'
 import { AccessibilitySection } from './components/AccessibilitySection'
+import { GeneralSection } from './components/GeneralSection'
+import { AiModelsSection } from './components/AiModelsSection'
 
-type Section = 'application' | 'storage' | 'integrations' | 'accessibility' | 'agent' | 'logs' | 'about'
+type Section = 'general' | 'ai-models' | 'application' | 'storage' | 'integrations' | 'accessibility' | 'agent' | 'logs' | 'about'
 
 const SECTIONS: { id: Section; label: string; icon: JSX.Element }[] = [
+  {
+    id: 'general',
+    label: 'General',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <line x1="4" y1="7" x2="20" y2="7" /><circle cx="9" cy="7" r="2" fill="currentColor" />
+        <line x1="4" y1="17" x2="20" y2="17" /><circle cx="15" cy="17" r="2" fill="currentColor" />
+      </svg>
+    )
+  },
+  {
+    id: 'ai-models',
+    label: 'AI models',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M12 2l9 5v10l-9 5-9-5V7z" /><path d="M12 22V12M21 7l-9 5-9-5" />
+      </svg>
+    )
+  },
   {
     id: 'application',
     label: 'Application',
@@ -93,23 +114,24 @@ const SECTIONS: { id: Section; label: string; icon: JSX.Element }[] = [
 // ─── Page shell ───────────────────────────────────────────────────────────────
 
 export default function SettingsPage(): JSX.Element {
-  const [section, setSection] = useState<Section>('application')
+  const [section, setSection] = useState<Section>('general')
 
   return (
     <div className="flex h-full">
 
       {/* Left nav */}
-      <nav className="w-52 shrink-0 border-r border-zinc-800 bg-surface-400 py-5 px-3 flex flex-col gap-0.5">
-        <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-wider px-3 mb-3">Settings</p>
+      <nav className="w-56 shrink-0 py-6 px-4 flex flex-col gap-0.5" aria-label="Settings sections">
+        <h1 className="pp-title px-3 mb-4">Settings</h1>
         {SECTIONS.map((s) => (
           <button
             key={s.id}
             onClick={() => setSection(s.id)}
+            aria-current={section === s.id}
             className={`
               flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] text-left transition-colors
               ${section === s.id
                 ? 'bg-accent/15 text-accent-light'
-                : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60'}
+                : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04]'}
             `}
           >
             <span className={section === s.id ? 'text-accent-light' : 'text-zinc-600'}>{s.icon}</span>
@@ -119,8 +141,10 @@ export default function SettingsPage(): JSX.Element {
       </nav>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto bg-surface-400">
-        <div className="p-8">
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-3xl p-8">
+          {section === 'general'       && <GeneralSection />}
+          {section === 'ai-models'     && <AiModelsSection />}
           {section === 'application'   && <ApplicationSection />}
           {section === 'storage'       && <StorageSection />}
           {section === 'integrations'  && <IntegrationsSection />}

@@ -1,6 +1,10 @@
 import { lazy } from 'react'
 import type { Page } from '@shared/stores/navStore'
 
+const CreatePage     = lazy(() => import('@areas/create/CreatePage'))
+const ImagesPage     = lazy(() => import('@areas/images/ImagesPage'))
+const LibraryPage    = lazy(() => import('@areas/library/LibraryPage'))
+const SkillsPage     = lazy(() => import('@areas/skills/SkillsPage'))
 const GeneratePage   = lazy(() => import('@areas/generate/GeneratePage'))
 const WorkflowsPage  = lazy(() => import('@areas/workflows/WorkflowsPage'))
 const ModelsPage     = lazy(() => import('@areas/models/ModelsPage'))
@@ -12,6 +16,10 @@ export interface RouteConfig {
 }
 
 export const ROUTES: Record<Page, RouteConfig> = {
+  create:    { component: CreatePage,    wrapperClass: 'flex flex-1 overflow-hidden' },
+  images:    { component: ImagesPage,    wrapperClass: 'flex flex-1 overflow-hidden' },
+  library:   { component: LibraryPage,   wrapperClass: 'flex flex-1 overflow-hidden' },
+  skills:    { component: SkillsPage,    wrapperClass: 'flex-1 overflow-y-auto'      },
   generate:  { component: GeneratePage,  wrapperClass: 'flex flex-1 overflow-hidden' },
   workflows: { component: WorkflowsPage, wrapperClass: 'flex flex-1 overflow-hidden' },
   models:    { component: ModelsPage,    wrapperClass: 'flex-1 overflow-y-auto'      },

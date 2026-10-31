@@ -1388,7 +1388,7 @@ export default function Viewer3D({
 
   return (
     <ModelErrorBoundary resetKey={modelUrl} fallback={<ModelLoadError />}>
-      <div ref={viewerRef} className="relative w-full h-full bg-surface-400">
+      <div ref={viewerRef} data-polypal-viewer className="relative w-full h-full bg-surface-400">
         {!modelUrl && <EmptyState />}
 
         {/* Splat path → fully isolated viewer (mkkellogg, outside R3F) */}
@@ -1409,7 +1409,7 @@ export default function Viewer3D({
             localClippingEnabled: true,
           }}
         >
-          <color attach="background" args={['#18181b']} />
+          <color attach="background" args={['#0f1512']} />
           <CanvasCapture domRef={canvasRef} />
           <ambientLight intensity={lightSettings.ambientIntensity ?? DEFAULT_LIGHT_SETTINGS.ambientIntensity} />
           <Environment background={false}>
@@ -1418,7 +1418,7 @@ export default function Viewer3D({
             <Lightformer intensity={0.3 * (lightSettings.envIntensity ?? DEFAULT_LIGHT_SETTINGS.envIntensity)} position={[4, 1, -4]} scale={6} />
           </Environment>
 
-          <gridHelper key={gridSize} args={[gridSize, 20, '#3f3f46', '#27272a']} />
+          <gridHelper key={gridSize} args={[gridSize, 20, '#2b3832', '#1a231f']} />
           <CameraFit jobId={currentJob?.id ?? null} extents={meshStats?.extents} />
 
           {contactShadows && modelUrl && meshStats && (

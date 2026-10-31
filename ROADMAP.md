@@ -70,6 +70,21 @@ in a browser smoke test of the built app.
 | 2 | Set real-world size; sized models export in millimetres for slicers instead of being normalised | `scale_to_size`, `/optimize/export?units=`, slicer export |
 | 3 | Measure tool: click two surface points for a distance in real units; area and volume in the editor | viewer toolbar, Mesh Editor stats |
 
+## Simplified mode and redesign
+
+| Feature | Where |
+|---|---|
+| Simplified (default) / Advanced modes, persisted; mode switch in the sidebar and Settings → General | `appStore.uiMode`, `navStore` |
+| 3D Generate: Image to model (drop/paste/browse + optional details) and Text to model (prompt + up to 5 references) | `src/areas/create` |
+| Local text-to-image via stable-diffusion.cpp, downloaded on demand, sharing the GPU queue | `api/services/image_engine.py`, `/images/*`, `src/areas/images` |
+| Projection texturing into vertex colours, with Ask me / Yes / No per generation | `api/services/texturing.py`, `/texture/project` |
+| Library with categories, tags, notes, thumbnails, export and reopen | `api/services/library.py`, `/library/*`, `src/areas/library` |
+| Claude-style skills (SKILL.md, progressive disclosure via `load_skill` / `read_skill_file`) | `api/services/skills.py`, `/skills/*`, `src/areas/skills` |
+| New visual design: deeper green-black surfaces, labelled sidebar, shared `pp-*` components | `globals.css`, `tailwind.config.js` |
+
+Limits: texturing paints from one picture, so sides the picture can't see are blended from
+nearby colour; image generation needs the engine and a model downloaded (2–12 GB).
+
 ## Fixed along the way
 
 - Decimate, smooth and exports dropped baked gizmo transforms (scene-graph node transforms were

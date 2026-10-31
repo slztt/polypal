@@ -286,3 +286,203 @@ export function errorMessage(err: unknown): string {
   if (err instanceof Error) return err.message.includes('Failed to fetch') ? 'Cannot reach the PolyPal API. Is the backend running?' : err.message
   return String(err)
 }
+
+// ─── 3D models (installed generators) ────────────────────────────────────────
+
+export interface GeneratorModel {
+  id: string
+  name: string
+  description: string
+  vram_gb: number
+  tags: string[]
+  downloaded: boolean
+  loaded: boolean
+  active: boolean
+}
+
+export interface GenerationStatus {
+  job_id: string
+  status: 'pending' | 'running' | 'done' | 'error' | 'cancelled'
+  progress: number
+  step?: string | null
+  output_url?: string | null
+  error?: string | null
+  queue_position?: number | null
+}
+
+export const modelsApi = {
+  all: () => request<GeneratorModel[]>('/model/all'),
+  async generateFromImage(
+    image: Blob,
+    modelId: string,
+    opts: { priority?: JobPriority; collection?: string; params?: Record<string, unknown>; filename?: string } = {},
+  ): Promise<{ job_id: string }> {
+    const form = new FormData()
+    form.append('image', image, opts.filename ?? 'image.png')
+    form.append('model_id', modelId)
+    form.append('collection', opts.collection ?? 'Creations')
+    form.append('remesh', 'none')
+    form.append('enable_texture', 'false')
+    form.append('texture_resolution', '1024')
+    form.append('params', JSON.stringify(opts.params ?? {}))
+    form.append('priority', opts.priority ?? 'normal')
+    const res = await fetch(`${base()}/generate/from-image`, { method: 'POST', body: form })
+    if (!res.ok) {
+      let detail = `${res.status}`
+      try { detail = (await res.json()).detail ?? detail } catch { /* non-JSON */ }
+      throw new ApiError(res.status, String(detail))
+    }
+    return res.json()
+  },
+  status: (jobId: string) => request<GenerationStatus>(`/generate/status/${encodeURIComponent(jobId)}`),
+  cancel: (jobId: string) => request<{ cancelled: boolean }>(`/generate/cancel/${encodeURIComponent(jobId)}`, { method: 'POST' }),
+}
+
+// ─── Image generation ─────────────────────────────────────────────────────────
+
+export interface ImageModel {
+  id: string
+  name: string
+  description: string
+  tags: string[]
+  vram_gb: number
+  size_gb: number
+  resolution: number
+  references: 'init' | 'multi'
+  downloaded: boolean
+  default: boolean
+}
+
+export interface DownloadState {
+  running?: boolean
+  percent?: number
+  status?: string
+  error?: string
+  done?: boolean
+  cancelled?: boolean
+  bytesDownloaded?: number
+  totalBytes?: number
+}
+
+export interface ImageStatus {
+  engine_installed: boolean
+  models: ImageModel[]
+  default_model: string | null
+  downloads: Record<string, DownloadState>
+  max_references: number
+}
+
+export interface ImageJob {
+  id: string
+  status: 'pending' | 'running' | 'done' | 'error' | 'cancelled'
+  progress: number
+  step: string
+  url: string | null
+  path?: string
+  error: string | null
+  prompt: string
+}
+
+export interface GalleryImage { url: string; path: string; prompt: string; model_id?: string | null; created_at?: string | null }
+
+export interface ImageRequest {
+  prompt: string; negative?: string; references?: string[]; model_id?: string | null
+  width?: number; height?: number; steps?: number; seed?: number; strength?: number
+  purpose?: 'image' | '3d'; priority?: JobPriority
+}
+
+export const imagesApi = {
+  status: () => request<ImageStatus>('/images/status'),
+  generate: (body: ImageRequest) => request<{ job_id: string; model_id: string }>('/images/generate', json(body)),
+  job: (id: string) => request<ImageJob>(`/images/jobs/${id}`),
+  cancel: (id: string) => request<{ cancelled: boolean }>(`/images/jobs/${id}/cancel`, { method: 'POST' }),
+  gallery: () => request<GalleryImage[]>('/images/gallery'),
+  deleteImage: (path: string) => request<{ deleted: boolean }>(`/images/gallery?${q({ path })}`, { method: 'DELETE' }),
+  deleteModel: (id: string) => request<{ deleted: boolean }>(`/images/models/${id}`, { method: 'DELETE' }),
+  engineInstallUrl: () => `${base()}/images/engine/install`,
+  modelDownloadUrl: (id: string) => `${base()}/images/models/${id}/download`,
+  cancelDownload: (id: string) => request<{ cancelled: boolean }>(`/images/models/${id}/download/cancel`, { method: 'POST' }),
+
+  /** Generate and wait; reports progress. Resolves with the finished job. */
+  async run(body: ImageRequest, onProgress?: (job: ImageJob) => void, signal?: AbortSignal): Promise<ImageJob> {
+    const { job_id } = await imagesApi.generate(body)
+    while (true) {
+      if (signal?.aborted) {
+        await imagesApi.cancel(job_id).catch(() => {})
+        throw new Error('Cancelled')
+      }
+      await new Promise((r) => setTimeout(r, 800))
+      const job = await imagesApi.job(job_id)
+      onProgress?.(job)
+      if (job.status === 'done') return job
+      if (job.status === 'error' || job.status === 'cancelled') throw new Error(job.error ?? 'Image generation failed')
+    }
+  },
+}
+
+// ─── Texturing ────────────────────────────────────────────────────────────────
+
+export const textureApi = {
+  project: (path: string, opts: { image?: string; imagePath?: string; view?: string } = {}) =>
+    request<{ path: string; url: string; details: { view: string; silhouette_match: number | null; visible_share: number }; stats: MeshStats }>(
+      '/texture/project', json({ path, image: opts.image, image_path: opts.imagePath, view: opts.view }),
+    ),
+}
+
+// ─── Library ──────────────────────────────────────────────────────────────────
+
+export interface LibraryItem {
+  id: string
+  name: string
+  category: string
+  tags: string[]
+  notes: string
+  file: string
+  format: string
+  bytes: number
+  source: string
+  model_name?: string | null
+  units?: string | null
+  created_at: string
+  updated_at: string
+  url: string
+  thumbnail_url: string | null
+}
+
+export const libraryApi = {
+  list: (query = '', category?: string) =>
+    request<LibraryItem[]>(`/library/items?${q({ q: query, ...(category ? { category } : {}) })}`),
+  save: (body: { source: string; name: string; category?: string; tags?: string[]; notes?: string; thumbnail?: string | null }) =>
+    request<LibraryItem>('/library/items', json(body)),
+  update: (id: string, body: Partial<Pick<LibraryItem, 'name' | 'category' | 'tags' | 'notes'>>) =>
+    request<LibraryItem>(`/library/items/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  remove: (id: string) => request<{ deleted: boolean }>(`/library/items/${id}`, { method: 'DELETE' }),
+  categories: () => request<string[]>('/library/categories'),
+  addCategory: (name: string) => request<string[]>('/library/categories', json({ name })),
+  removeCategory: (name: string) => request<string[]>(`/library/categories/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+}
+
+// ─── Skills ───────────────────────────────────────────────────────────────────
+
+export interface Skill {
+  name: string
+  description: string
+  valid: boolean
+  error: string | null
+  files: string[]
+  enabled: boolean
+  source: string
+  license?: string | null
+  updated_at?: string
+  content?: string
+}
+
+export const skillsApi = {
+  list: () => request<Skill[]>('/skills'),
+  get: (name: string) => request<Skill>(`/skills/${encodeURIComponent(name)}`),
+  template: () => request<{ content: string }>('/skills/template'),
+  save: (content: string, originalName?: string) => request<Skill>('/skills', { method: 'PUT', body: JSON.stringify({ content, original_name: originalName }) }),
+  setEnabled: (name: string, enabled: boolean) => request<Skill>(`/skills/${encodeURIComponent(name)}/enabled`, json({ enabled })),
+  remove: (name: string) => request<{ deleted: boolean }>(`/skills/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+  install: (body: { url?: string; path?: string }) => request<{ installed: string[] }>('/skills/install', json(body)),
+}

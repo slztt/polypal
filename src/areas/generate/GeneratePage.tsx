@@ -12,6 +12,7 @@ import { useCurrentMesh, useMeshStats } from '@areas/editor/useMeshEditing'
 import { meshPathFromUrl } from './meshPath'
 import { errorMessage } from '@shared/api/polypalApi'
 import QueueIndicator from './components/QueueIndicator'
+import { SaveToLibraryDialog } from '@shared/components/ui/SaveToLibraryDialog'
 import { getDefaultAssetLibraryService } from './assetLibraryService'
 import { buildOrcaSlicerDeepLink, canOpenInOrcaSlicer } from './orcaSlicerLink'
 import { resolveAssetLibraryOpenTarget, type ProjectedAssetLibraryEntry } from './assetLibraryProjection'
@@ -728,6 +729,7 @@ export default function GeneratePage(): JSX.Element {
   }, [undoMesh, redoMesh])
 
   const hasModel = currentJob?.status === 'done' && !!currentJob.outputUrl
+  const [savingToLibrary, setSavingToLibrary] = useState(false)
   const showOpenInSlicer = hasModel && canOpenInOrcaSlicer(currentJob?.outputUrl)
 
   // Selecting a point light (from the 3D marker or the light panel list) —
@@ -1120,6 +1122,20 @@ export default function GeneratePage(): JSX.Element {
                   />
                 )}
               </div>
+
+              <button
+                onClick={() => setSavingToLibrary(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border bg-zinc-800 border-zinc-700/50 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 transition-colors"
+              >
+                Save to Library
+              </button>
+              {savingToLibrary && currentJob?.outputUrl && (
+                <SaveToLibraryDialog
+                  source={currentJob.outputUrl}
+                  onClose={() => setSavingToLibrary(false)}
+                  onSaved={(item) => useAppStore.getState().showToast(`Saved “${item.name}” to your library`)}
+                />
+              )}
 
               {/* Smooth */}
               <div className="relative">

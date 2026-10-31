@@ -37,8 +37,8 @@
     height: 100%;
     width: 100%;
     overflow: hidden;
-    background-color: #111113;
-    color: #f4f4f5;
+    background-color: #0a0f0d;
+    color: #f3f6f4;
     font-family: var(--app-font);
     -webkit-font-smoothing: antialiased;
     user-select: none;
@@ -49,14 +49,55 @@
     width: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #18181b;
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #3f3f46;
+    background: #25302b;
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #52525b;
+    background: #35443d;
+  }
+}
+
+/* PolyPal design system — shared building blocks for every page. */
+@layer components {
+  .pp-card {
+    @apply rounded-2xl border border-white/[0.06] bg-surface-300/80 shadow-card;
+  }
+  .pp-panel {
+    @apply rounded-2xl border border-white/[0.05] bg-surface-400;
+  }
+  .pp-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium
+      transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .pp-btn-primary {
+    @apply pp-btn bg-gradient-to-b from-green-500 to-green-600 text-white shadow-glow
+      hover:from-green-400 hover:to-green-500 active:scale-[0.99];
+  }
+  .pp-btn-ghost {
+    @apply pp-btn border border-white/[0.07] bg-white/[0.04] text-zinc-200 hover:bg-white/[0.08] hover:text-white;
+  }
+  .pp-btn-danger {
+    @apply pp-btn border border-red-500/20 bg-red-500/10 text-red-300 hover:bg-red-500/20;
+  }
+  .pp-input {
+    @apply w-full rounded-xl border border-white/[0.08] bg-black/30 px-3.5 py-2.5 text-sm text-zinc-100
+      placeholder-zinc-500 transition focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/20;
+  }
+  .pp-label {
+    @apply text-xs font-medium text-zinc-400;
+  }
+  .pp-title {
+    @apply text-2xl font-semibold tracking-tight text-white;
+  }
+  .pp-subtitle {
+    @apply text-sm text-zinc-400;
+  }
+  .pp-chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1
+      text-[11px] text-zinc-300;
   }
 }
 

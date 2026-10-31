@@ -4,7 +4,7 @@ import MemoryIndicator from './MemoryIndicator'
 import { PolyPalLogo } from '@shared/components/ui/PolyPalLogo'
 
 export default function TopBar(): JSX.Element {
-  const { patchUpdateReady, platform, showRamIndicator } = useAppStore()
+  const { patchUpdateReady, platform, showRamIndicator, uiMode } = useAppStore()
   const isMac = platform === 'darwin'
 
   const [isMaximized, setIsMaximized] = useState(false)
@@ -20,11 +20,14 @@ export default function TopBar(): JSX.Element {
   const handleClose    = () => window.electron.window.close()
 
   return (
-    <header className="flex items-center h-10 px-4 bg-surface-400 border-b border-zinc-800 drag-region shrink-0">
+    <header className="flex items-center h-11 px-4 bg-surface-500 border-b border-white/[0.05] drag-region shrink-0">
       {/* App name */}
       <div className={`flex items-center gap-2 no-drag ${isMac ? 'pl-[72px]' : ''}`}>
-        <PolyPalLogo size={26} />
-        <span className="text-sm font-semibold text-zinc-100">PolyPal</span>
+        <PolyPalLogo size={24} />
+        <span className="text-[14px] font-semibold tracking-tight text-white">PolyPal</span>
+        <span className="ml-1 rounded-md border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 text-[10px] font-medium text-zinc-400">
+          {uiMode === 'simple' ? 'Simplified' : 'Advanced'}
+        </span>
       </div>
 
       {/* Spacer */}

@@ -180,6 +180,13 @@ interface AppState {
   generationPriority: JobPriority
   setGenerationPriority: (p: JobPriority) => void
 
+  // Interface mode: Simplified (default) or Advanced (the full studio)
+  uiMode: 'simple' | 'advanced'
+  setUiMode: (mode: 'simple' | 'advanced') => void
+  // Texture after generating: ask each time, always, or never
+  textureMode: 'ask' | 'yes' | 'no'
+  setTextureMode: (mode: 'ask' | 'yes' | 'no') => void
+
   // Mesh editor side panel
   editorOpen: boolean
   setEditorOpen: (v: boolean) => void
@@ -310,6 +317,11 @@ export const useAppStore = create<AppState>()(
       generationPriority: 'normal',
       setGenerationPriority: (p) => set({ generationPriority: p }),
 
+      uiMode: 'simple',
+      setUiMode: (mode) => set({ uiMode: mode }),
+      textureMode: 'ask',
+      setTextureMode: (mode) => set({ textureMode: mode }),
+
       editorOpen: false,
       setEditorOpen: (v) => set({ editorOpen: v }),
       editPlanner: 'rules',
@@ -391,6 +403,8 @@ export const useAppStore = create<AppState>()(
         generationPriority: state.generationPriority,
         editorOpen: state.editorOpen,
         editPlanner: state.editPlanner,
+        uiMode: state.uiMode,
+        textureMode: state.textureMode,
       }),
     }
   )

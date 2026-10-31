@@ -20,9 +20,9 @@ export function Card({ title, description, aside, children }: {
   children: React.ReactNode
 }): JSX.Element {
   return (
-    <div className="rounded-xl bg-surface-300 border border-zinc-800 overflow-hidden">
+    <div className="rounded-2xl bg-surface-300/80 border border-white/[0.06] shadow-card overflow-hidden">
       {(title || description || aside) && (
-        <div className="px-4 py-3 border-b border-zinc-800/80 flex items-start justify-between gap-4">
+        <div className="px-4 py-3 border-b border-white/[0.05] flex items-start justify-between gap-4">
           <div className="min-w-0">
             {title && <p className="text-xs font-semibold text-zinc-200">{title}</p>}
             {description && <p className="text-[11px] text-zinc-500 mt-0.5">{description}</p>}
@@ -30,7 +30,7 @@ export function Card({ title, description, aside, children }: {
           {aside && <div className="shrink-0">{aside}</div>}
         </div>
       )}
-      <div className="divide-y divide-zinc-800/60">
+      <div className="divide-y divide-white/[0.04]">
         {children}
       </div>
     </div>
