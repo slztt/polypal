@@ -93,10 +93,13 @@ export function InfoRow({ label, value }: { label: string; value: string }): JSX
 export function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }): JSX.Element {
   return (
     <button
+      type="button"
+      role="switch"
+      aria-checked={value}
       onClick={() => onChange(!value)}
-      className={`relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0 ${value ? 'bg-accent' : 'bg-zinc-700'}`}
+      className={`relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0 active:scale-95 ${value ? 'bg-accent shadow-[0_0_12px_-2px_rgba(34,197,94,0.6)]' : 'bg-zinc-700 hover:bg-zinc-600'}`}
     >
-      <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${value ? 'translate-x-4' : 'translate-x-0'}`} />
+      <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${value ? 'translate-x-4' : 'translate-x-0'}`} />
     </button>
   )
 }

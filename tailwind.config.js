@@ -33,9 +33,29 @@ module.exports = {
           '0%':   { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(400%)' },
         },
+        'page-in': {
+          '0%':   { opacity: '0', transform: 'translateY(6px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        pop: {
+          '0%':   { opacity: '0', transform: 'scale(0.96)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        'rise-in': {
+          '0%':   { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        shimmer: {
+          '0%':   { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
       },
       animation: {
         slide: 'slide 1.5s ease-in-out infinite',
+        'page-in': 'page-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        pop: 'pop 180ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        'rise-in': 'rise-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        shimmer: 'shimmer 2.2s linear infinite',
       },
     }
   },

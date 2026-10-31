@@ -10,6 +10,7 @@ import {
 import { dataUrlToBlob } from '@shared/components/ui/ImagePicker'
 import { meshPathFromUrl } from '@areas/generate/meshPath'
 import { applyMeshResult } from '@areas/editor/useMeshEditing'
+import { brandText } from '@shared/branding'
 import { showCompletionNotification, showErrorNotification } from '@shared/utils/notification'
 
 export type CreateMode = 'image' | 'text'
@@ -23,7 +24,17 @@ export interface CreateInput {
   references: string[]      // text mode, data URLs
 }
 
-interface CreateState {
+export interface CreateForm {
+  mode: CreateMode
+  image: string | null
+  details: string
+  prompt: string
+  references: string[]
+  notice: string | null
+}
+
+interface CreateState extends CreateForm {
+  setForm: (patch: Partial<CreateForm>) => void
   stage: Stage
   progress: number
   message: string
@@ -54,6 +65,39 @@ async function fetchBlob(url: string): Promise<Blob> {
   return res.blob()
 }
 
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(blob)
+  })
+}
+
+/**
+ * With a reference-following image model installed (PolyPal Image Pro), draw
+ * the back of the object so texturing has real colours for the far side
+ * instead of guessing. Returns null (and texturing guesses) when that model
+ * isn't installed or the drawing fails.
+ */
+async function drawBackView(pictureUrl: string | null, onStep: (message: string) => void): Promise<string | null> {
+  if (!pictureUrl) return null
+  try {
+    const status = await imagesApi.status()
+    const pro = status.engine_installed && status.models.find((m) => m.downloaded && m.references === 'multi')
+    if (!pro) return null
+    const front = pictureUrl.startsWith('data:') ? pictureUrl : await blobToDataUrl(await fetchBlob(pictureUrl))
+    onStep('Imagining the back of your model…')
+    const job = await imagesApi.run({
+      prompt: 'the same object seen from directly behind, back view, identical colours, materials and style, centred, plain white background, soft even lighting',
+      references: [front], model_id: pro.id, purpose: '3d', priority: useAppStore.getState().generationPriority,
+    }, (j) => onStep(j.step ? `Imagining the back: ${j.step}` : 'Imagining the back of your model…'))
+    return job.url ? await blobToDataUrl(await fetchBlob(job.url)) : null
+  } catch {
+    return null
+  }
+}
+
 export const useCreateStore = create<CreateState>((set, get) => ({
   stage: 'idle',
   progress: 0,
@@ -64,6 +108,13 @@ export const useCreateStore = create<CreateState>((set, get) => ({
   textured: false,
   running: false,
   handoff: null,
+  mode: 'image',
+  image: null,
+  details: '',
+  prompt: '',
+  references: [],
+  notice: null,
+  setForm: (patch) => set(patch),
   setHandoff: (image) => set({ handoff: image }),
 
   async run(input, model, { imageReady }) {
@@ -110,11 +161,11 @@ export const useCreateStore = create<CreateState>((set, get) => ({
           throw new Error('Cancelled')
         }
         const s = await modelsApi.status(job_id)
-        const step = s.status === 'pending' && s.queue_position ? `Waiting in queue (position ${s.queue_position})` : s.step ?? 'Building…'
+        const step = s.status === 'pending' && s.queue_position ? `Waiting in queue (position ${s.queue_position})` : brandText(s.step) || 'Building…'
         useAppStore.getState().updateCurrentJob({ progress: s.progress, step })
         set({ progress: 30 + Math.round(s.progress * 0.6), message: step })
         if (s.status === 'done' && s.output_url) outputUrl = s.output_url
-        if (s.status === 'error') throw new Error(s.error?.split('\n').filter(Boolean).slice(-1)[0] ?? 'The 3D model failed')
+        if (s.status === 'error') throw new Error(brandText(s.error?.split('\n').filter(Boolean).slice(-1)[0]) || 'The 3D model failed')
         if (s.status === 'cancelled') throw new Error('Cancelled')
       }
       activeJob = null
@@ -156,7 +207,9 @@ export const useCreateStore = create<CreateState>((set, get) => ({
     if (!path) return
     set({ stage: 'texture', progress: 92, message: 'Painting your model…', askTexture: false, running: true, error: null })
     try {
-      const result = await textureApi.project(path)
+      const backImage = await drawBackView(get().pictureUrl, (message) => set({ message }))
+      set({ message: 'Painting your model…' })
+      const result = await textureApi.project(path, { backImage: backImage ?? undefined })
       applyMeshResult(result.url, 'Textured')
       set({ stage: 'done', progress: 100, message: 'Your model is ready', textured: true })
     } catch (e) {

@@ -2,6 +2,7 @@
 // provenance, GPU management, the generation queue and copilot conversations.
 import { useAppStore } from '@shared/stores/appStore'
 import { readSseStream } from '@shared/utils/sse'
+import { brandName, brandText } from '@shared/branding'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -311,7 +312,7 @@ export interface GenerationStatus {
 }
 
 export const modelsApi = {
-  all: () => request<GeneratorModel[]>('/model/all'),
+  all: async () => (await request<GeneratorModel[]>('/model/all')).map((m) => ({ ...m, name: brandName(m.name) })),
   async generateFromImage(
     image: Blob,
     modelId: string,
@@ -392,7 +393,10 @@ export interface ImageRequest {
 }
 
 export const imagesApi = {
-  status: () => request<ImageStatus>('/images/status'),
+  status: async () => {
+    const s = await request<ImageStatus>('/images/status')
+    return { ...s, models: s.models.map((m) => ({ ...m, name: brandText(m.name), description: brandText(m.description) })) }
+  },
   generate: (body: ImageRequest) => request<{ job_id: string; model_id: string }>('/images/generate', json(body)),
   job: (id: string) => request<ImageJob>(`/images/jobs/${id}`),
   cancel: (id: string) => request<{ cancelled: boolean }>(`/images/jobs/${id}/cancel`, { method: 'POST' }),
@@ -423,9 +427,12 @@ export const imagesApi = {
 // ─── Texturing ────────────────────────────────────────────────────────────────
 
 export const textureApi = {
-  project: (path: string, opts: { image?: string; imagePath?: string; view?: string } = {}) =>
-    request<{ path: string; url: string; details: { view: string; silhouette_match: number | null; visible_share: number }; stats: MeshStats }>(
-      '/texture/project', json({ path, image: opts.image, image_path: opts.imagePath, view: opts.view }),
+  project: (path: string, opts: { image?: string; imagePath?: string; view?: string; backImage?: string; removeLighting?: boolean } = {}) =>
+    request<{ path: string; url: string; details: { view: string; silhouette_match: number | null; visible_share: number; lighting_removed?: number; views_used?: string[] }; stats: MeshStats }>(
+      '/texture/project', json({
+        path, image: opts.image, image_path: opts.imagePath, view: opts.view,
+        back_image: opts.backImage, remove_lighting: opts.removeLighting ?? true,
+      }),
     ),
 }
 
@@ -485,4 +492,67 @@ export const skillsApi = {
   setEnabled: (name: string, enabled: boolean) => request<Skill>(`/skills/${encodeURIComponent(name)}/enabled`, json({ enabled })),
   remove: (name: string) => request<{ deleted: boolean }>(`/skills/${encodeURIComponent(name)}`, { method: 'DELETE' }),
   install: (body: { url?: string; path?: string }) => request<{ installed: string[] }>('/skills/install', json(body)),
+}
+
+// ─── Generated meshes ─────────────────────────────────────────────────────────
+
+export interface WorkspaceMesh {
+  path: string
+  url: string
+  name: string
+  collection: string
+  bytes: number
+  modified_at: string
+  kind: string
+  model_name: string | null
+  thumbnail_url: string | null
+}
+
+export const meshesApi = {
+  list: (limit = 200) => request<WorkspaceMesh[]>(`/meshes?${q({ limit: String(limit) })}`),
+  /** Delete meshes by workspace path or /workspace/… URL. */
+  remove: (paths: string[]) => request<{ deleted: string[] }>('/meshes/delete', json({ paths })),
+}
+
+// ─── Map Builder ──────────────────────────────────────────────────────────────
+
+export interface MapOptions {
+  name: string
+  widthM: number | null
+  wallHeight: number
+  walls: 'auto' | 'dark' | 'light' | 'color'
+  wallColor: string | null     // #rrggbb
+  tolerance: number
+  doors: boolean
+}
+
+export interface MapResult {
+  path: string
+  url: string
+  size_m: [number, number, number]
+  wall_count: number
+  doors: { name: string; width_m: number; swing: number }[]
+  cell_m: number
+  seconds: number
+}
+
+export const mapsApi = {
+  async build(image: Blob, opts: MapOptions): Promise<MapResult> {
+    const form = new FormData()
+    form.append('image', image, 'map.png')
+    form.append('name', opts.name || 'map')
+    if (opts.widthM) form.append('width_m', String(opts.widthM))
+    form.append('wall_height', String(opts.wallHeight))
+    form.append('walls', opts.walls)
+    if (opts.walls === 'color' && opts.wallColor) form.append('wall_color', opts.wallColor)
+    form.append('tolerance', String(opts.tolerance))
+    form.append('doors', String(opts.doors))
+    const res = await fetch(`${base()}/maps/build`, { method: 'POST', body: form })
+    if (!res.ok) {
+      let detail = `${res.status}`
+      try { detail = (await res.json()).detail ?? detail } catch { /* non-JSON */ }
+      throw new ApiError(res.status, String(detail))
+    }
+    return res.json()
+  },
 }

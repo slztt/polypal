@@ -1,16 +1,16 @@
 import { create } from 'zustand'
 
 /**
- * Pages. Simplified mode shows create · images · library · skills · settings;
+ * Pages. Simplified mode shows create · maps · images · library · skills · settings;
  * Advanced mode adds the studio (the full Generate page), workflows and
  * extensions.
  */
 export type Page =
-  | 'create' | 'images' | 'library' | 'skills' | 'settings'
+  | 'create' | 'maps' | 'images' | 'library' | 'skills' | 'settings'
   | 'generate' | 'workflows' | 'models'
 
-export const SIMPLE_PAGES: Page[] = ['create', 'images', 'library', 'skills', 'settings']
-export const ADVANCED_PAGES: Page[] = ['generate', 'workflows', 'models', 'images', 'library', 'skills', 'settings']
+export const SIMPLE_PAGES: Page[] = ['create', 'maps', 'images', 'library', 'skills', 'settings']
+export const ADVANCED_PAGES: Page[] = ['generate', 'workflows', 'models', 'maps', 'images', 'library', 'skills', 'settings']
 
 interface NavState {
   currentPage: Page

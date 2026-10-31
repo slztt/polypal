@@ -1,6 +1,7 @@
 // Picture inputs for the simplified pages: drop, paste (Ctrl/Cmd+V anywhere
 // on the page) or browse. Values are data URLs.
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
+import { playSfx } from '@shared/utils/sfx'
 
 const ACCEPT = 'image/png,image/jpeg,image/webp,image/bmp'
 const MAX_BYTES = 25 * 1024 * 1024
@@ -23,11 +24,16 @@ export function dataUrlToBlob(dataUrl: string): Blob {
   return new Blob([bytes], { type: mime })
 }
 
-/** Calls `onFiles` with pictures pasted anywhere on the page while mounted. */
-export function usePastedImages(onFiles: (files: File[]) => void, enabled = true): void {
+/**
+ * Calls `onFiles` with pictures pasted anywhere on the page while mounted.
+ * With `scope`, only while that element is on screen (pages stay mounted in
+ * the background, and a hidden page must not grab the paste).
+ */
+export function usePastedImages(onFiles: (files: File[]) => void, enabled = true, scope?: RefObject<HTMLElement>): void {
   useEffect(() => {
     if (!enabled) return
     const handler = (e: ClipboardEvent) => {
+      if (scope && (!scope.current || scope.current.offsetParent === null)) return
       const target = e.target as HTMLElement | null
       // Let text fields paste text normally unless the clipboard holds a picture.
       const files = Array.from(e.clipboardData?.files ?? []).filter((f) => f.type.startsWith('image/'))
@@ -38,7 +44,7 @@ export function usePastedImages(onFiles: (files: File[]) => void, enabled = true
     }
     window.addEventListener('paste', handler)
     return () => window.removeEventListener('paste', handler)
-  }, [onFiles, enabled])
+  }, [onFiles, enabled, scope])
 }
 
 const UploadIcon = (
@@ -55,6 +61,7 @@ export function ImageDropZone({ value, onChange, onError, label = 'Drop a pictur
   className?: string
 }): JSX.Element {
   const input = useRef<HTMLInputElement>(null)
+  const root = useRef<HTMLDivElement>(null)
   const [dragging, setDragging] = useState(false)
 
   const accept = useCallback(async (files: File[]) => {
@@ -62,27 +69,29 @@ export function ImageDropZone({ value, onChange, onError, label = 'Drop a pictur
     if (!file) return
     try {
       onChange(await readImageFile(file))
+      playSfx('drop')
     } catch (e) {
       onError?.(e instanceof Error ? e.message : String(e))
     }
   }, [onChange, onError])
 
-  usePastedImages(accept)
+  usePastedImages(accept, true, root)
 
   return (
     <div
+      ref={root}
       onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
       onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false) }}
       onDrop={(e) => { e.preventDefault(); setDragging(false); void accept(Array.from(e.dataTransfer.files)) }}
-      className={`relative overflow-hidden rounded-2xl border-2 border-dashed transition-colors ${
-        dragging ? 'border-accent bg-accent/[0.07]' : value ? 'border-white/[0.08] bg-black/20' : 'border-white/[0.10] bg-black/20 hover:border-white/20'
+      className={`group/drop relative overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-200 ${
+        dragging ? 'scale-[1.01] border-accent bg-accent/[0.07]' : value ? 'border-white/[0.08] bg-black/20' : 'border-white/[0.10] bg-black/20 hover:border-white/20'
       } ${className}`}
     >
       <input ref={input} type="file" accept={ACCEPT} className="hidden"
         onChange={(e) => { void accept(Array.from(e.target.files ?? [])); e.target.value = '' }} />
       {value ? (
         <>
-          <img src={value} alt="Selected picture" className="h-full w-full object-contain p-3" />
+          <img src={value} alt="Selected picture" className="h-full w-full animate-pop object-contain p-3" />
           <div className="absolute right-2 top-2 flex gap-1.5">
             <button type="button" onClick={() => input.current?.click()} className="rounded-lg bg-black/60 px-2.5 py-1 text-[11px] text-zinc-200 backdrop-blur hover:bg-black/80">Replace</button>
             <button type="button" onClick={() => onChange(null)} aria-label="Remove picture" className="rounded-lg bg-black/60 px-2 py-1 text-[11px] text-zinc-200 backdrop-blur hover:bg-red-500/70">✕</button>
@@ -90,7 +99,7 @@ export function ImageDropZone({ value, onChange, onError, label = 'Drop a pictur
         </>
       ) : (
         <button type="button" onClick={() => input.current?.click()} className="flex h-full w-full flex-col items-center justify-center gap-3 p-6 text-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10 text-accent-light">{UploadIcon}</span>
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10 text-accent-light transition-transform duration-300 group-hover/drop:-translate-y-1 group-hover/drop:scale-110">{UploadIcon}</span>
           <span className="text-sm font-medium text-zinc-200">{label}</span>
           <span className="text-xs text-zinc-500">or <span className="text-accent-light">browse</span> · paste with Ctrl+V</span>
         </button>
@@ -126,7 +135,7 @@ export function ReferencePicker({ values, onChange, max = 5, onError }: {
       <input ref={input} type="file" accept={ACCEPT} multiple className="hidden"
         onChange={(e) => { void add(Array.from(e.target.files ?? [])); e.target.value = '' }} />
       {values.map((url, i) => (
-        <div key={i} className="group relative h-16 w-16 overflow-hidden rounded-xl border border-white/[0.08] bg-black/30">
+        <div key={i} className="group relative h-16 w-16 animate-pop overflow-hidden rounded-xl border border-white/[0.08] bg-black/30 transition-transform hover:scale-105">
           <img src={url} alt={`Reference ${i + 1}`} className="h-full w-full object-cover" />
           <button type="button" aria-label={`Remove reference ${i + 1}`} onClick={() => onChange(values.filter((_, j) => j !== i))}
             className="absolute right-1 top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[10px] text-white group-hover:flex">✕</button>
@@ -150,8 +159,15 @@ export function Segmented<T extends string>({ value, options, onChange, ariaLabe
   ariaLabel: string
   size?: 'sm' | 'md'
 }): JSX.Element {
+  const index = Math.max(0, options.findIndex((o) => o.value === value))
   return (
-    <div role="radiogroup" aria-label={ariaLabel} className="flex gap-1 rounded-xl border border-white/[0.06] bg-black/30 p-1">
+    <div role="radiogroup" aria-label={ariaLabel} className="relative flex rounded-xl border border-white/[0.06] bg-black/30 p-1">
+      {/* Sliding highlight behind the selected option */}
+      <span
+        aria-hidden
+        className="absolute bottom-1 top-1 rounded-lg bg-white/[0.09] shadow-card transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+        style={{ left: 4, width: `calc((100% - 8px) / ${options.length})`, transform: `translateX(${index * 100}%)` }}
+      />
       {options.map((o) => (
         <button
           key={o.value}
@@ -159,9 +175,10 @@ export function Segmented<T extends string>({ value, options, onChange, ariaLabe
           role="radio"
           aria-checked={value === o.value}
           title={o.hint}
+          data-sfx="toggle"
           onClick={() => onChange(o.value)}
-          className={`flex-1 rounded-lg font-medium transition-colors ${size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-2 text-[13px]'} ${
-            value === o.value ? 'bg-white/[0.09] text-white shadow-card' : 'text-zinc-400 hover:text-zinc-100'
+          className={`relative z-10 flex-1 rounded-lg font-medium transition-colors duration-200 active:scale-[0.97] ${size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-2 text-[13px]'} ${
+            value === o.value ? 'text-white' : 'text-zinc-400 hover:text-zinc-100'
           }`}
         >
           {o.label}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { brandText } from '@shared/branding'
 import { useAppStore } from '@shared/stores/appStore'
 import { editApi, errorMessage, generationApi, type Provenance, type ProvenanceRecord } from '@shared/api/polypalApi'
 import { trackGenerationJob, type CurrentMesh } from './useMeshEditing'
@@ -18,7 +19,7 @@ function GenerationCard({ record }: { record: ProvenanceRecord }): JSX.Element |
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-2.5 flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] text-zinc-200 font-medium truncate">{g.model_name}</p>
+        <p className="text-[11px] text-zinc-200 font-medium truncate">{brandText(g.model_name)}</p>
         {g.model_version && <span className="text-[9px] text-zinc-500 font-mono">v{g.model_version}</span>}
       </div>
       <p className="text-[10px] text-zinc-500">

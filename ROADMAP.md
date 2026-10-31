@@ -82,8 +82,12 @@ in a browser smoke test of the built app.
 | Claude-style skills (SKILL.md, progressive disclosure via `load_skill` / `read_skill_file`) | `api/services/skills.py`, `/skills/*`, `src/areas/skills` |
 | New visual design: deeper green-black surfaces, labelled sidebar, shared `pp-*` components | `globals.css`, `tailwind.config.js` |
 
-Limits: texturing paints from one picture, so sides the picture can't see are blended from
-nearby colour; image generation needs the engine and a model downloaded (2–12 GB).
+| Map Builder: walls, textured floor, hinged doors with glTF open animations | `api/services/map_builder.py`, `/maps/build`, `src/areas/maps` |
+| Texturing v2: spherical-harmonics de-lighting, highlight removal, grazing-angle weights, diffusion fill, optional back view | `api/services/texturing.py` |
+| Delete generated models; tabs stay mounted; motion and Web Audio sounds; PolyPal names for models (credited in About) | `api/services/meshes.py`, `Router.tsx`, `utils/sfx.ts`, `branding.ts` |
+
+Limits: without a back view, sides the picture can't see are estimated from nearby colour;
+the Map Builder reads clear top-down pictures (not perspective screenshots) and finds doors as wall gaps; image generation needs the engine and a model downloaded (2–12 GB).
 
 ## Fixed along the way
 

@@ -4,6 +4,7 @@ import { useNavStore } from '@shared/stores/navStore'
 import { ReferencePicker } from '@shared/components/ui/ImagePicker'
 import { errorMessage, imagesApi, type GalleryImage, type ImageJob } from '@shared/api/polypalApi'
 import { useCreateStore } from '@areas/create/createStore'
+import { usePageActive } from '@shared/hooks/usePageActive'
 import { ImageEngineSetup } from './ImageEngineSetup'
 import { imageEngineReady, useImageEngine } from './useImageEngine'
 
@@ -53,6 +54,7 @@ export default function ImagesPage(): JSX.Element {
     try { setGallery(await imagesApi.gallery()) } catch { /* backend not up yet */ }
   }, [])
   useEffect(() => { void loadGallery() }, [loadGallery])
+  usePageActive('images', () => { void loadGallery(); void refreshEngine() })
 
   const generate = useCallback(async () => {
     if (!prompt.trim() || !model) return
@@ -174,7 +176,7 @@ export default function ImagesPage(): JSX.Element {
       <section className="pp-panel flex flex-1 flex-col overflow-hidden" aria-label="Your images">
         <div className="relative flex min-h-0 flex-1 items-center justify-center p-6">
           {shown ? (
-            <img src={`${apiUrl}${shown.url}`} alt={shown.prompt} className="max-h-full max-w-full rounded-xl object-contain shadow-card" />
+            <img key={shown.url} src={`${apiUrl}${shown.url}`} alt={shown.prompt} className="max-h-full max-w-full animate-pop rounded-xl object-contain shadow-card" />
           ) : (
             <p className="text-sm text-zinc-500">Your pictures will appear here</p>
           )}
@@ -182,7 +184,7 @@ export default function ImagesPage(): JSX.Element {
         {shown && (
           <div className="flex items-center gap-2 border-t border-white/[0.05] bg-surface-400/80 px-4 py-3">
             <p className="min-w-0 flex-1 truncate text-xs text-zinc-400" title={shown.prompt}>{shown.prompt}</p>
-            <button type="button" className="pp-btn-ghost" onClick={() => void remove(shown)}>Delete</button>
+            <button type="button" className="pp-btn-ghost hover:text-red-300" data-sfx="delete" onClick={() => void remove(shown)}>Delete</button>
             <a className="pp-btn-ghost" href={`${apiUrl}${shown.url}`} download>Download</a>
             <button type="button" className="pp-btn-primary" onClick={() => void makeModel(shown)}>Make a 3D model</button>
           </div>
@@ -191,7 +193,7 @@ export default function ImagesPage(): JSX.Element {
           <div className="flex gap-2 overflow-x-auto border-t border-white/[0.05] p-3" role="list" aria-label="Recent images">
             {gallery.map((img) => (
               <button key={img.path} type="button" role="listitem" onClick={() => setSelected(img)} title={img.prompt}
-                className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border ${shown?.path === img.path ? 'border-accent' : 'border-white/[0.06] hover:border-white/20'}`}>
+                className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition-all duration-150 hover:-translate-y-0.5 active:scale-95 ${shown?.path === img.path ? 'border-accent ring-2 ring-accent/30' : 'border-white/[0.06] hover:border-white/20'}`}>
                 <img src={`${apiUrl}${img.url}`} alt={img.prompt} className="h-full w-full object-cover" loading="lazy" />
               </button>
             ))}

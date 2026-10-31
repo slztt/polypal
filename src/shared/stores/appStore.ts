@@ -186,6 +186,11 @@ interface AppState {
   // Texture after generating: ask each time, always, or never
   textureMode: 'ask' | 'yes' | 'no'
   setTextureMode: (mode: 'ask' | 'yes' | 'no') => void
+  // Interface sound effects
+  soundEnabled: boolean
+  setSoundEnabled: (v: boolean) => void
+  soundVolume: number            // 0–1
+  setSoundVolume: (v: number) => void
 
   // Mesh editor side panel
   editorOpen: boolean
@@ -321,6 +326,10 @@ export const useAppStore = create<AppState>()(
       setUiMode: (mode) => set({ uiMode: mode }),
       textureMode: 'ask',
       setTextureMode: (mode) => set({ textureMode: mode }),
+      soundEnabled: true,
+      setSoundEnabled: (v) => set({ soundEnabled: v }),
+      soundVolume: 0.5,
+      setSoundVolume: (v) => set({ soundVolume: Math.min(1, Math.max(0, v)) }),
 
       editorOpen: false,
       setEditorOpen: (v) => set({ editorOpen: v }),
@@ -405,6 +414,8 @@ export const useAppStore = create<AppState>()(
         editPlanner: state.editPlanner,
         uiMode: state.uiMode,
         textureMode: state.textureMode,
+        soundEnabled: state.soundEnabled,
+        soundVolume: state.soundVolume,
       }),
     }
   )

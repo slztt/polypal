@@ -23,6 +23,18 @@ class ProjectRequest(BaseModel):
     image: Optional[str] = None       # data URL; omitted = the picture the model was generated from
     image_path: Optional[str] = None  # or a workspace image path
     view: Optional[str] = None        # force a side; omitted = detect
+    back_image: Optional[str] = None  # optional data URL of the opposite side (e.g. a generated back view)
+    remove_lighting: bool = True      # divide the photo's own lighting out of the colours
+
+
+def _decode_data_url(value: str) -> bytes:
+    match = re.match(r"^data:image/[\w.+-]+;base64,(.+)$", value, re.S)
+    if not match:
+        raise HTTPException(400, "image must be a data URL")
+    try:
+        return base64.b64decode(match.group(1), validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise HTTPException(400, "image is not valid base64") from exc
 
 
 def _image_bytes(body: ProjectRequest, mesh_path) -> bytes:
@@ -61,11 +73,14 @@ async def project(body: ProjectRequest):
     out_dir = mesh_path.parent if registry.is_within_workspace(mesh_path) else registry.WORKSPACE_DIR / "Edits"
     output = out_dir / f"{mesh_path.stem}_textured_{uuid.uuid4().hex[:8]}.glb"
     try:
-        details = await asyncio.to_thread(texturing.texture_mesh_file, mesh_path, image, output, body.view)
+        extras = [(_decode_data_url(body.back_image), "opposite")] if body.back_image else []
+        details = await asyncio.to_thread(
+            texturing.texture_mesh_file, mesh_path, image, output, body.view, extras, body.remove_lighting,
+        )
     except texturing.TexturingError as exc:
         raise HTTPException(422, str(exc)) from exc
     provenance.record_edit(output, mesh_path, steps=[{
-        "op": "texture_projection", "label": "Texture from picture", "params": {"view": body.view}, "details": details,
+        "op": "texture_projection", "label": "Texture from picture", "params": {"view": body.view, "back_view": bool(body.back_image), "remove_lighting": body.remove_lighting}, "details": details,
     }], source="texture")
     rel = provenance.relative_to_workspace(output)
     stats = await asyncio.to_thread(compute_stats, output)

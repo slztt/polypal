@@ -12,7 +12,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
   return (
     <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}
       className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${checked ? 'bg-accent' : 'bg-zinc-700'}`}>
-      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${checked ? 'left-[18px]' : 'left-0.5'}`} />
+      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${checked ? 'left-[18px]' : 'left-0.5'}`} />
     </button>
   )
 }
@@ -48,7 +48,7 @@ function SkillEditor({ original, onClose, onSaved }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6" role="dialog" aria-modal="true" aria-label="Edit skill">
-      <div className="pp-panel flex h-full max-h-[760px] w-full max-w-3xl flex-col overflow-hidden">
+      <div className="pp-panel flex h-full max-h-[760px] w-full max-w-3xl animate-pop flex-col overflow-hidden">
         <div className="flex items-center justify-between border-b border-white/[0.05] px-5 py-3">
           <div>
             <p className="text-sm font-medium text-white">{original ? `Edit ${original.name}` : 'New skill'}</p>
@@ -161,7 +161,7 @@ export default function SkillsPage(): JSX.Element {
       ) : (
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3">
           {skills.map((skill) => (
-            <li key={skill.name} className={`pp-card flex flex-col gap-3 p-4 ${skill.enabled ? '' : 'opacity-60'}`}>
+            <li key={skill.name} className={`pp-card pp-card-hover flex animate-rise-in flex-col gap-3 p-4 ${skill.enabled ? '' : 'opacity-60'}`}>
               <div className="flex items-start gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent-light" aria-hidden>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -185,7 +185,7 @@ export default function SkillsPage(): JSX.Element {
                 <button type="button" className="pp-btn-ghost flex-1" onClick={() => setEditing(skill)}>Edit</button>
                 {confirmDelete === skill.name ? (
                   <>
-                    <button type="button" className="pp-btn-danger" onClick={() => void remove(skill.name)}>Delete</button>
+                    <button type="button" className="pp-btn-danger" data-sfx="delete" onClick={() => void remove(skill.name)}>Delete</button>
                     <button type="button" className="pp-btn-ghost" onClick={() => setConfirmDelete(null)}>Keep</button>
                   </>
                 ) : (

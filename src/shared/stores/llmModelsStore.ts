@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { brandName, brandText } from '../branding'
 import { useCallback, useEffect, useMemo } from 'react'
 import { useAppStore } from './appStore'
 
@@ -63,7 +64,8 @@ export const useLlmModelsStore = create<LlmModelsStore>((set, get) => ({
       try {
         const res = await fetch(`${apiUrl}/llm/models`)
         const data: { models?: LlmModel[] } = await res.json()
-        set({ models: data.models ?? [], fetchedApiUrl: apiUrl, loading: false, error: null })
+        const models = (data.models ?? []).map((m) => (m.source === 'custom' ? m : { ...m, name: brandName(m.name), description: brandText(m.description) }))
+        set({ models, fetchedApiUrl: apiUrl, loading: false, error: null })
       } catch (e) {
         set({ error: e instanceof Error ? e.message : String(e), loading: false })
       } finally {

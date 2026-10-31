@@ -9,6 +9,10 @@ const NAV: Record<Page, { label: string; hint: string; icon: JSX.Element }> = {
     label: '3D Generate', hint: 'Turn a picture or words into a 3D model',
     icon: <svg {...ICON}><path d="M12 2 3 7v10l9 5 9-5V7z" /><path d="m3 7 9 5 9-5M12 12v10" /></svg>,
   },
+  maps: {
+    label: 'Map Builder', hint: 'Turn a map or floor plan picture into a 3D level',
+    icon: <svg {...ICON}><path d="M9 3 3 5.5v15.5l6-2.5 6 2.5 6-2.5V3l-6 2.5z" /><path d="M9 3v15.5M15 5.5V21" /></svg>,
+  },
   generate: {
     label: 'Studio', hint: 'Full generation, editing and diagnostics',
     icon: <svg {...ICON}><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>,
@@ -51,7 +55,8 @@ export function ModeSwitch({ compact = false }: { compact?: boolean }): JSX.Elem
           role="radio"
           aria-checked={uiMode === mode}
           onClick={() => setUiMode(mode)}
-          className={`rounded-lg py-1.5 font-medium transition-colors ${compact ? 'text-[11px]' : 'text-xs'} ${
+          data-sfx="toggle"
+          className={`rounded-lg py-1.5 font-medium transition-all duration-200 active:scale-95 ${compact ? 'text-[11px]' : 'text-xs'} ${
             uiMode === mode ? 'bg-accent text-white shadow-glow' : 'text-zinc-400 hover:text-zinc-100'
           }`}
         >
@@ -83,15 +88,16 @@ export default function Sidebar(): JSX.Element {
               key={id}
               type="button"
               onClick={() => navigate(id)}
+              data-sfx="tab"
               title={item.hint}
               aria-current={active ? 'page' : undefined}
-              className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13.5px] transition-colors ${
+              className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13.5px] transition-all duration-150 active:scale-[0.98] ${
                 active ? 'bg-accent/[0.12] text-white' : 'text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100'
               }`}
             >
-              {active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-accent-light" />}
-              <span className={active ? 'text-accent-light' : 'text-zinc-500 group-hover:text-zinc-300'}>{item.icon}</span>
-              <span className="font-medium">{item.label}</span>
+              <span className={`absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-accent-light transition-all duration-300 ${active ? 'scale-y-100 opacity-100' : 'scale-y-0 opacity-0'}`} />
+              <span className={`transition-transform duration-200 group-hover:scale-110 ${active ? 'text-accent-light' : 'text-zinc-500 group-hover:text-zinc-300'}`}>{item.icon}</span>
+              <span className="font-medium transition-transform duration-200 group-hover:translate-x-0.5">{item.label}</span>
             </button>
           )
         })}

@@ -19,12 +19,15 @@ PolyPal is a desktop application for Windows, Linux, and Apple Silicon macOS.
 
 ## What's new in 0.5
 
-PolyPal opens in **Simplified mode**: five tabs — *3D Generate*, *Image Generator*, *Library*, *Skills* and *Settings* — with no workflows or node graphs to learn. Switch to **Advanced mode** (bottom of the sidebar, or Settings → General) for the full studio, workflows and extensions.
+PolyPal opens in **Simplified mode**: six tabs — *3D Generate*, *Map Builder*, *Image Generator*, *Library*, *Skills* and *Settings* — with no workflows or node graphs to learn. Switch to **Advanced mode** (bottom of the sidebar, or Settings → General) for the full studio, workflows and extensions.
 
 | | |
 |---|---|
 | **3D Generate** | *Image to model*: drop, browse or paste (Ctrl+V) a picture, optionally add extra details. *Text to model*: describe it, optionally add up to 5 reference pictures — PolyPal draws a picture locally, then builds the model from it. |
-| **Local texturing** | Choose *Ask me / Yes / No* to colour new models. Colour is projected from the source picture onto the mesh — no GPU or download needed. |
+| **Map Builder** | Drop a top-down map or floor plan: walls are extruded, the picture becomes the floor, and gaps in walls become hinged doors you can click open. Exports as GLB with each door as its own animated part (works in Blender, Unity, Unreal, Godot). |
+| **Local texturing** | Choose *Ask me / Yes / No* to colour new models. Colour is projected from the source picture, with the photo's own lighting and shine removed (fitted to the model's surface), and hidden sides filled without copying front details. With *PolyPal Image Pro* installed, a back view is drawn first for real back colours. |
+| **Your models** | Every generated model is listed on 3D Generate, where it can be reopened or deleted. |
+| **Feel** | Tabs keep what you were doing when you switch away; subtle motion and optional interface sounds (Settings → General). |
 | **Image Generator** | Text-to-image on your own computer with [stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp) (SD Turbo, SDXL Turbo, or FLUX.1 Kontext for up to 5 references). Engine and models download on first use. Any picture can become a 3D model in one click. |
 | **Library** | Save models (from the generate page or the studio) with a name, category, tags, notes and a thumbnail; search, rename, re-categorise, export or reopen them. |
 | **Skills** | Teach the assistant your rules with Claude-style skills: a folder with a `SKILL.md` (YAML `name` + `description`, then instructions). The assistant loads a skill only when it's relevant. Create, edit, toggle, or add from GitHub or a folder. |

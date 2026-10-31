@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { brandText } from '@shared/branding'
 import { useGeneration } from '@shared/hooks/useGeneration'
 
 function formatElapsed(seconds: number): string {
@@ -101,7 +102,7 @@ export default function GenerationHUD(): JSX.Element | null {
               <div className="flex items-center gap-2.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
                 <span className="text-sm font-medium text-zinc-200">
-                  {step ?? (status === 'uploading' ? 'Reading image…' : 'Generating 3D mesh…')}
+                  {brandText(step) || (status === 'uploading' ? 'Reading image…' : 'Generating 3D mesh…')}
                 </span>
               </div>
               <span className="text-xs tabular-nums text-zinc-500">{formatElapsed(elapsed)}</span>

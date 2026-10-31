@@ -384,8 +384,8 @@ export function ExtensionDrawer({
               <dt className="text-zinc-600">Version</dt>
               <dd className="text-zinc-400 text-right font-mono text-[11.5px]">{ext.version ? `v${ext.version}` : '—'}</dd>
               <dt className="text-zinc-600">Source</dt>
-              <dd className="text-zinc-400 text-right font-mono text-[11.5px] max-w-[230px] truncate" style={{ direction: 'rtl' }} title={localPath ?? ext.source ?? undefined}>
-                {localPath ?? ext.source ?? (ext.builtin ? 'Built-in' : '—')}
+              <dd className="text-zinc-400 text-right font-mono text-[11.5px] max-w-[230px] truncate" style={{ direction: 'rtl' }} title={localPath ?? undefined}>
+                {localPath ?? (ext.builtin ? 'Built-in' : 'PolyPal plugin')}
               </dd>
               <dt className="text-zinc-600">Nodes</dt>
               <dd className="text-zinc-400 text-right font-mono text-[11.5px]">{ext.nodes.length}</dd>

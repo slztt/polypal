@@ -5,7 +5,7 @@ import { useExtensionsStore } from '@shared/stores/extensionsStore'
 import { errorMessage, modelsApi, type GeneratorModel } from '@shared/api/polypalApi'
 
 export const RECOMMENDED_3D = {
-  name: 'TripoSG',
+  name: 'PolyPal 3D Standard',
   url: 'https://github.com/lightningpixel/modly-triposg-extension',
   sizeNote: 'about 6 GB download · 8 GB+ graphics memory recommended',
 }

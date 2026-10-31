@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { brandName, brandText } from '../branding'
 import type { ModelExtension, ProcessExtension, AnyExtension } from '@shared/types/electron.d'
 
 // ─── Re-exports for consumers ─────────────────────────────────────────────────
@@ -50,6 +51,22 @@ export function partitionExtensionsByType(list: AnyExtension[]): {
   }
 }
 
+/** Show plugins under PolyPal names; ids and sources are untouched so installs and updates still work. */
+function brandExtensions(list: AnyExtension[]): AnyExtension[] {
+  let unknown = 0
+  return list.map((ext) => {
+    const branded = brandText(ext.name)
+    const name = branded !== ext.name || /polypal/i.test(ext.name ?? '') ? branded : brandName(ext.name, unknown++)
+    return {
+      ...ext,
+      name,
+      description: brandText(ext.description),
+      author: 'PolyPal',
+      nodes: (ext.nodes ?? []).map((n) => ({ ...n, name: brandText(n.name) })),
+    } as AnyExtension
+  })
+}
+
 export const useExtensionsStore = create<ExtensionsStore>((set, get) => ({
   modelExtensions:   [],
   processExtensions: [],
@@ -65,7 +82,7 @@ export const useExtensionsStore = create<ExtensionsStore>((set, get) => ({
     set({ loading: true })
     try {
       const list = (await window.electron.extensions.list()) as AnyExtension[]
-      const extensions = partitionExtensionsByType(list)
+      const extensions = partitionExtensionsByType(brandExtensions(list))
       set({
         ...extensions,
         loading:           false,

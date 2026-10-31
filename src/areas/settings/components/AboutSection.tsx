@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Section, Card, Row, LinkButton } from '@shared/ui'
+import { BRANDS } from '@shared/branding'
 
 export function AboutSection(): JSX.Element {
   const [version, setVersion] = useState<string>('')
@@ -33,6 +34,19 @@ export function AboutSection(): JSX.Element {
           </Row>
         </Card>
 
+      </div>
+
+      <div className="mt-4">
+        <Card title="Open-source models" description="PolyPal's AI models and engines are built on these projects. Each keeps its own licence — some (for example the FLUX and SDXL Turbo weights) are for non-commercial use only.">
+          <ul className="grid grid-cols-2 gap-x-6 gap-y-1.5 px-4 py-3 text-[11.5px]">
+            {[...new Map(BRANDS.filter((b) => b.name !== 'PolyPal' && (typeof b.name === 'string' || b.basedOn.startsWith('Qwen'))).map((b) => [b.basedOn, b])).values()].map((b) => (
+              <li key={b.basedOn} className="flex justify-between gap-3">
+                <span className="text-zinc-300">{typeof b.name === 'string' ? b.name : 'PolyPal Assistant'}</span>
+                <span className="truncate text-right text-zinc-500">{b.basedOn}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
       </div>
     </Section>
   )

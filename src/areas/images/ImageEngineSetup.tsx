@@ -67,7 +67,7 @@ export function ImageEngineSetup({ compact = false }: { compact?: boolean }): JS
       <div className="pp-card flex items-center justify-between gap-4 p-4">
         <div>
           <p className="text-sm font-medium text-white">Image engine</p>
-          <p className="mt-0.5 text-xs text-zinc-400">stable-diffusion.cpp — runs on NVIDIA, AMD, Apple and CPU.</p>
+          <p className="mt-0.5 text-xs text-zinc-400">Runs on NVIDIA, AMD, Apple and CPU — no internet needed once installed.</p>
           <div className="mt-2"><Progress state={engineState} /></div>
         </div>
         {status.engine_installed

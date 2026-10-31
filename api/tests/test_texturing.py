@@ -80,6 +80,64 @@ class ProjectionTests(unittest.TestCase):
         self.assertLess(result.visible_share, 0.9)
 
 
+def _lit_sphere_picture(size=240, albedo=(230, 120, 40), light=(-0.6, 0.6, 0.53)):
+    """A uniformly coloured ball photographed under a strong key light from the top left."""
+    img = np.full((size, size, 4), 255, dtype=np.uint8)
+    c, r = size / 2, size * 0.4
+    ys, xs = np.mgrid[0:size, 0:size]
+    nx, ny = (xs - c) / r, -(ys - c) / r
+    inside = nx ** 2 + ny ** 2 < 1
+    nz = np.sqrt(np.clip(1 - nx ** 2 - ny ** 2, 0, 1))
+    L = np.array(light) / np.linalg.norm(light)
+    shade = np.clip(nx * L[0] + ny * L[1] + nz * L[2], 0, 1) * 0.85 + 0.15
+    for k in range(3):
+        img[..., k] = np.where(inside, np.clip(albedo[k] * shade, 0, 255), 255)
+    return img
+
+
+@unittest.skipUnless(HAVE_DEPS, "trimesh/Pillow not installed")
+class LightingAndFillTests(unittest.TestCase):
+    def test_photo_lighting_is_removed(self) -> None:
+        mesh = trimesh.creation.icosphere(subdivisions=5, radius=1.0)
+        picture = _lit_sphere_picture()
+        raw = texturing.project_texture(mesh.vertices, mesh.faces, picture, view="front (+Z)", remove_lighting=False)
+        fixed = texturing.project_texture(mesh.vertices, mesh.faces, picture, view="front (+Z)")
+        front = mesh.vertices[:, 2] > 0.5
+        def spread(result):
+            lum = result.vertex_colors[front, :3].astype(float) @ np.array([0.299, 0.587, 0.114])
+            return lum.std() / lum.mean()
+        self.assertLess(spread(fixed), spread(raw) * 0.5)
+        self.assertGreater(fixed.lighting_removed, 0.1)
+        # Hue survives: still orange.
+        mean = fixed.vertex_colors[front, :3].mean(axis=0)
+        self.assertGreater(mean[0], mean[1] > mean[2] and mean[1] or 0)
+
+    def test_small_front_details_are_not_copied_onto_the_back(self) -> None:
+        mesh = _slab()
+        picture = _picture()
+        picture[60:80, 60:80] = [10, 200, 10, 255]  # a small green "logo" on the red half
+        result = texturing.project_texture(mesh.vertices, mesh.faces, picture, view="front (+Z)")
+        colours = result.vertex_colors.astype(int)
+        x, y, z = mesh.vertices[:, 0], mesh.vertices[:, 1], mesh.vertices[:, 2]
+        logo_x, logo_y = -0.5, 0.0  # where the logo lands on the slab
+        near = (np.abs(x - logo_x) < 0.08) & (np.abs(y - logo_y) < 0.08)
+        front_logo = colours[near & (z > 0.1)]
+        back_logo = colours[near & (z < -0.1)]
+        self.assertTrue((front_logo[:, 1] > front_logo[:, 0]).any())
+        self.assertFalse((back_logo[:, 1] > back_logo[:, 0]).any())
+
+    def test_extra_back_view_paints_the_back(self) -> None:
+        mesh = _slab()
+        front = _picture()
+        back = np.full_like(front, 255)
+        back[20:120, 20:220] = [240, 220, 20, 255]  # all-yellow back
+        result = texturing.project_texture(mesh.vertices, mesh.faces, front, view="front (+Z)", extra_views=[(back, "opposite")])
+        colours = result.vertex_colors.astype(int)
+        behind = (mesh.vertices[:, 2] < -0.14) & (np.abs(mesh.vertices[:, 0]) < 0.9) & (np.abs(mesh.vertices[:, 1]) < 0.4)
+        self.assertTrue(((colours[behind, 0] > 180) & (colours[behind, 1] > 160) & (colours[behind, 2] < 120)).mean() > 0.9)
+        self.assertEqual(result.views_used, ("front (+Z)", "back (-Z)"))
+
+
 @unittest.skipUnless(HAVE_DEPS, "trimesh/Pillow not installed")
 class TextureRouteTests(unittest.TestCase):
     def test_uses_the_recorded_source_picture_and_writes_vertex_colours(self) -> None:

@@ -1,3 +1,5 @@
+import { playSfx } from './sfx'
+
 /**
  * Native OS notification (Windows toast / macOS Notification Center / Linux) for
  * events worth surfacing even when the user isn't looking at the app — e.g. a
@@ -17,9 +19,11 @@ async function notifyIfUnfocused(title: string, body: string): Promise<void> {
 }
 
 export function showCompletionNotification(body: string, title = 'PolyPal'): Promise<void> {
+  playSfx('success')
   return notifyIfUnfocused(title, body)
 }
 
 export function showErrorNotification(body: string, title = 'PolyPal'): Promise<void> {
+  playSfx('error')
   return notifyIfUnfocused(title, body)
 }

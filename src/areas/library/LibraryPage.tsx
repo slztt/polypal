@@ -5,6 +5,8 @@ import { errorMessage, libraryApi, type LibraryItem } from '@shared/api/polypalA
 import { meshPathFromUrl } from '@areas/generate/meshPath'
 import { useCreateStore } from '@areas/create/createStore'
 import { formatBytes } from '@shared/utils/format'
+import { brandText } from '@shared/branding'
+import { usePageActive } from '@shared/hooks/usePageActive'
 
 const ALL = '__all__'
 
@@ -52,7 +54,7 @@ function ItemDetails({ item, categories, onChanged, onDeleted, onOpen }: {
   }
 
   return (
-    <aside className="pp-panel flex w-[320px] shrink-0 flex-col gap-4 overflow-y-auto p-4" aria-label="Model details">
+    <aside className="pp-panel flex w-[320px] animate-rise-in shrink-0 flex-col gap-4 overflow-y-auto p-4" aria-label="Model details">
       <div className="aspect-square overflow-hidden rounded-xl bg-surface-300">
         {item.thumbnail_url
           ? <img src={`${apiUrl}${item.thumbnail_url}`} alt={item.name} className="h-full w-full object-contain" />
@@ -92,13 +94,13 @@ function ItemDetails({ item, categories, onChanged, onDeleted, onOpen }: {
       <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
         <dt className="text-zinc-500">Size</dt><dd className="text-zinc-300">{formatBytes(item.bytes)}</dd>
         <dt className="text-zinc-500">Format</dt><dd className="uppercase text-zinc-300">{item.format}</dd>
-        {item.model_name && <><dt className="text-zinc-500">Made with</dt><dd className="text-zinc-300">{item.model_name}</dd></>}
+        {item.model_name && <><dt className="text-zinc-500">Made with</dt><dd className="text-zinc-300">{brandText(item.model_name)}</dd></>}
         <dt className="text-zinc-500">Saved</dt><dd className="text-zinc-300">{new Date(item.created_at).toLocaleDateString()}</dd>
       </dl>
 
       {confirmDelete ? (
         <div className="flex gap-2">
-          <button type="button" className="pp-btn-danger flex-1" onClick={() => void libraryApi.remove(item.id).then(onDeleted, (e) => setError(errorMessage(e)))}>
+          <button type="button" className="pp-btn-danger flex-1" data-sfx="delete" onClick={() => void libraryApi.remove(item.id).then(onDeleted, (e) => setError(errorMessage(e)))}>
             Delete for good
           </button>
           <button type="button" className="pp-btn-ghost" onClick={() => setConfirmDelete(false)}>Keep</button>
@@ -136,6 +138,7 @@ export default function LibraryPage(): JSX.Element {
     }
   }, [])
   useEffect(() => { void load() }, [load])
+  usePageActive('library', () => { void load() })
 
   const counts = useMemo(() => {
     const map: Record<string, number> = {}
@@ -227,13 +230,13 @@ export default function LibraryPage(): JSX.Element {
             </div>
           ) : (
             <ul className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3">
-              {visible.map((item) => (
-                <li key={item.id}>
+              {visible.map((item, i) => (
+                <li key={item.id} className="animate-rise-in" style={{ animationDelay: `${Math.min(i, 16) * 22}ms` }}>
                   <button type="button" onClick={() => setSelectedId(item.id)} onDoubleClick={() => open(item)}
-                    className={`pp-card w-full overflow-hidden text-left transition-colors ${selectedId === item.id ? 'border-accent/60' : 'hover:border-white/20'}`}>
+                    className={`pp-card pp-card-hover group w-full overflow-hidden text-left ${selectedId === item.id ? 'border-accent/60' : 'hover:border-white/20'}`}>
                     <div className="aspect-square bg-surface-300">
                       {item.thumbnail_url
-                        ? <img src={`${apiUrl}${item.thumbnail_url}`} alt="" className="h-full w-full object-contain" loading="lazy" />
+                        ? <img src={`${apiUrl}${item.thumbnail_url}`} alt="" className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" loading="lazy" />
                         : <div className="flex h-full items-center justify-center text-xs text-zinc-600">No preview</div>}
                     </div>
                     <div className="px-3 py-2">

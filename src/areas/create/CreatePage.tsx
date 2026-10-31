@@ -11,6 +11,9 @@ import { imageEngineReady, useImageEngine } from '@areas/images/useImageEngine'
 import { ImageEngineSetup } from '@areas/images/ImageEngineSetup'
 import { useCreateStore, type CreateMode } from './createStore'
 import { RECOMMENDED_3D, useModelSetup } from './useModelSetup'
+import { RecentModels } from './RecentModels'
+import { meshesApi, errorMessage } from '@shared/api/polypalApi'
+import { playSfx } from '@shared/utils/sfx'
 
 const TEXTURE_OPTIONS = [
   { value: 'ask' as const, label: 'Ask me', hint: 'Ask after each model whether to add colour' },
@@ -100,7 +103,7 @@ function ExportMenu({ url, onClose }: { url: string; onClose: () => void }): JSX
     onClose()
   }
   return (
-    <div className="absolute bottom-full right-0 mb-2 w-56 rounded-xl border border-white/[0.08] bg-surface-300 p-1.5 shadow-card">
+    <div className="absolute bottom-full right-0 mb-2 w-56 origin-bottom-right animate-pop rounded-xl border border-white/[0.08] bg-surface-300 p-1.5 shadow-card">
       {([
         ['glb', 'GLB', 'Keeps colour · games, web, Blender'],
         ['obj', 'OBJ', 'Widely supported'],
@@ -116,15 +119,19 @@ function ExportMenu({ url, onClose }: { url: string; onClose: () => void }): JSX
 }
 
 export default function CreatePage(): JSX.Element {
-  const [mode, setMode] = useState<CreateMode>('image')
-  const [image, setImage] = useState<string | null>(null)
-  const [details, setDetails] = useState('')
-  const [prompt, setPrompt] = useState('')
-  const [references, setReferences] = useState<string[]>([])
-  const [notice, setNotice] = useState<string | null>(null)
+  // The form lives in the store so it survives switching tabs.
+  const { mode, image, details, prompt, references, notice, setForm } = useCreateStore()
+  const setMode = (v: CreateMode) => setForm({ mode: v })
+  const setImage = (v: string | null) => setForm({ image: v })
+  const setDetails = (v: string) => setForm({ details: v })
+  const setPrompt = (v: string) => setForm({ prompt: v })
+  const setReferences = (v: string[]) => setForm({ references: v })
+  const setNotice = useCallback((v: string | null) => setForm({ notice: v }), [setForm])
   const [saving, setSaving] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [assistantOpen, setAssistantOpen] = useState(false)
+  const [modelsOpen, setModelsOpen] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const textureMode = useAppStore((s) => s.textureMode)
   const setTextureMode = useAppStore((s) => s.setTextureMode)
@@ -144,12 +151,33 @@ export default function CreatePage(): JSX.Element {
   const setHandoff = pipeline.setHandoff
   useEffect(() => {
     if (!handoff) return
-    setMode('image')
-    setImage(handoff)
+    setForm({ mode: 'image', image: handoff })
     setHandoff(null)
-  }, [handoff, setHandoff])
+  }, [handoff, setHandoff, setForm])
 
   const modelUrl = currentJob?.status === 'done' ? currentJob.outputUrl ?? null : null
+  const meshHistory = useAppStore((s) => s.meshHistory)
+
+  // Delete the model on screen and every version of it (edits, textured copy).
+  const deleteCurrent = useCallback(async () => {
+    setConfirmDelete(false)
+    const urls = [...new Set([...meshHistory, modelUrl].filter((u): u is string =>
+      !!u && u.startsWith('/workspace/') && !u.startsWith('/workspace/Library/')))]
+    if (!urls.length) {
+      setForm({ notice: 'This model lives in your Library — delete it from the Library tab.' })
+      return
+    }
+    try {
+      await meshesApi.remove(urls)
+      playSfx('delete')
+      useAppStore.getState().clearMeshHistory()
+      useAppStore.getState().setCurrentJob(null)
+      pipeline.reset()
+      showToast('Model deleted')
+    } catch (e) {
+      setForm({ notice: `Could not delete: ${errorMessage(e)}` })
+    }
+  }, [meshHistory, modelUrl, pipeline, showToast, setForm])
   const canGenerate = !!setup.ready && !pipeline.running && (mode === 'image' ? !!image : prompt.trim().length > 0 && imageReady)
 
   const generate = useCallback(() => {
@@ -158,7 +186,7 @@ export default function CreatePage(): JSX.Element {
       ? 'Your extra details need the image generator, so the picture was used as-is. Set it up in Settings → AI models.'
       : null)
     void pipeline.run({ mode, image, details, prompt, references }, setup.ready, { imageReady })
-  }, [setup.ready, mode, image, details, prompt, references, imageReady, pipeline])
+  }, [setup.ready, mode, image, details, prompt, references, imageReady, pipeline, setNotice])
 
   return (
     <div className="flex flex-1 gap-4 overflow-hidden p-4">
@@ -250,9 +278,9 @@ export default function CreatePage(): JSX.Element {
           )}
 
           {pipeline.askTexture && modelUrl && (
-            <div role="dialog" aria-label="Add colour to your model" className="pp-card absolute left-1/2 top-6 w-[360px] -translate-x-1/2 p-4 animate-fade-in">
+            <div role="dialog" aria-label="Add colour to your model" className="pp-card absolute left-1/2 top-6 w-[360px] -translate-x-1/2 p-4 animate-rise-in">
               <p className="text-sm font-medium text-white">Add colour to your model?</p>
-              <p className="mt-1 text-xs text-zinc-400">PolyPal can paint it using the picture it was made from. It takes a few seconds.</p>
+              <p className="mt-1 text-xs text-zinc-400">PolyPal paints it from the picture it was made from and removes the photo's own lighting and shine, so it looks right under any light.</p>
               <div className="mt-3 flex gap-2">
                 <button type="button" className="pp-btn-primary flex-1" onClick={() => void pipeline.texture()}>Yes, add colour</button>
                 <button type="button" className="pp-btn-ghost" onClick={pipeline.dismissTexture}>No thanks</button>
@@ -266,6 +294,9 @@ export default function CreatePage(): JSX.Element {
           <button type="button" className="pp-btn-ghost" onClick={() => setAssistantOpen((v) => !v)} aria-pressed={assistantOpen}>
             Ask the assistant
           </button>
+          <button type="button" className="pp-btn-ghost" onClick={() => setModelsOpen((v) => !v)} aria-pressed={modelsOpen} data-sfx={modelsOpen ? 'close' : 'open'}>
+            Your models
+          </button>
           <div className="ml-auto flex items-center gap-2">
             {modelUrl && !pipeline.textured && !pipeline.running && (
               <button type="button" className="pp-btn-ghost" onClick={() => void pipeline.texture()}>Add colour</button>
@@ -277,14 +308,26 @@ export default function CreatePage(): JSX.Element {
                   <button type="button" className="pp-btn-ghost" onClick={() => setExportOpen((v) => !v)} aria-expanded={exportOpen}>Export</button>
                   {exportOpen && <ExportMenu url={modelUrl} onClose={() => setExportOpen(false)} />}
                 </div>
+                {confirmDelete ? (
+                  <span className="flex animate-pop items-center gap-1.5">
+                    <button type="button" className="pp-btn-danger" data-sfx="none" onClick={() => void deleteCurrent()}>Delete model</button>
+                    <button type="button" className="pp-btn-ghost" onClick={() => setConfirmDelete(false)}>Keep</button>
+                  </span>
+                ) : (
+                  <button type="button" className="pp-btn-ghost hover:text-red-300" aria-label="Delete this model" title="Delete this model and its versions" onClick={() => setConfirmDelete(true)}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></svg>
+                  </button>
+                )}
                 <button type="button" className="pp-btn-primary" onClick={() => setSaving(true)}>Save to Library</button>
               </>
             )}
           </div>
         </div>
 
+        <RecentModels open={modelsOpen} onClose={() => setModelsOpen(false)} refreshKey={modelUrl} />
+
         {assistantOpen && (
-          <div className="absolute bottom-[64px] left-4 top-4 flex w-[340px] flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-surface-400 shadow-card">
+          <div className="absolute bottom-[64px] left-4 top-4 flex w-[340px] animate-rise-in flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-surface-400 shadow-card">
             <div className="flex items-center justify-between border-b border-white/[0.05] px-3 py-2">
               <span className="text-sm font-medium text-white">Assistant</span>
               <button type="button" aria-label="Close assistant" className="text-zinc-500 hover:text-white" onClick={() => setAssistantOpen(false)}>✕</button>
