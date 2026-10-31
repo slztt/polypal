@@ -25,6 +25,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from services import conversations, copilot, llm_server
+from services import skills as skills_service
 from services.app_info import APP_NAME
 from services.llm_server import llama_pool
 
@@ -301,6 +302,33 @@ EXTRA_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "load_skill",
+            "description": "Load the full instructions of an installed skill (see the Skills list). Call it before acting on a request that matches a skill's description.",
+            "parameters": {
+                "type": "object",
+                "properties": {"name": {"type": "string", "description": "The skill name exactly as listed."}},
+                "required": ["name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_skill_file",
+            "description": "Read a supporting file that a loaded skill refers to.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "The skill name."},
+                    "path": {"type": "string", "description": "File path inside the skill, as listed by load_skill."},
+                },
+                "required": ["name", "path"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "get_gpu_status",
             "description": "GPU memory in use and free, and which 3D models / local LLMs are loaded.",
             "parameters": {"type": "object", "properties": {}},
@@ -548,6 +576,18 @@ async def _run_tool(name: str, arguments: dict, context: dict) -> ToolOutcome:
                     f"Regeneration queued (job {data['job_id']}, seed {data.get('seed')}).",
                     {"type": "generation_started", "job_id": data["job_id"]},
                 )
+
+            if name == "load_skill":
+                try:
+                    return ToolOutcome(await asyncio.to_thread(skills_service.load_for_agent, arguments["name"]))
+                except (KeyError, skills_service.SkillError) as exc:
+                    return ToolOutcome(f"Skill unavailable: {exc}", ok=False)
+
+            if name == "read_skill_file":
+                try:
+                    return ToolOutcome(await asyncio.to_thread(skills_service.read_file_for_agent, arguments["name"], arguments["path"]))
+                except (KeyError, skills_service.SkillError) as exc:
+                    return ToolOutcome(f"Cannot read skill file: {exc}", ok=False)
 
             if name == "get_gpu_status":
                 r = await client.get(f"{POLYPAL_API}/gpu/status")
@@ -862,6 +902,13 @@ def _build_messages(request: AgentChatRequest, send_images: bool) -> tuple[list[
             for e in extensions
         ]
         parts.append("Available extensions (use the exact id when creating workflows):\n" + "\n".join(ext_lines))
+
+    try:
+        skills_section = skills_service.prompt_section()
+    except Exception:  # noqa: BLE001 — a broken skills folder must not break the chat
+        skills_section = ""
+    if skills_section:
+        parts.append(skills_section)
 
     history, dropped = copilot.trim_history([m.model_dump() for m in request.messages], request.max_history_chars)
     if dropped:

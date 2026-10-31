@@ -1,3 +1,9 @@
+import os
+import tempfile
+
+# Keep the copilot's skills folder out of the real agent directory.
+os.environ.setdefault("POLYPAL_SKILLS_DIR", tempfile.mkdtemp(prefix="polypal-skills-test-"))
+
 import asyncio
 import json
 import os

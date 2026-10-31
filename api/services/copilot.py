@@ -27,6 +27,8 @@ TOOL_RISK: dict[str, str] = {
     "list_mesh_operations": "read",
     "get_provenance": "read",
     "get_gpu_status": "read",
+    "load_skill": "read",
+    "read_skill_file": "read",
     "decimate_mesh": "write",
     "smooth_mesh": "write",
     "edit_mesh": "write",
